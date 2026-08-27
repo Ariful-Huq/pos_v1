@@ -1,3 +1,5 @@
+# backend/config/urls.py
+
 """
 URL configuration for config project.
 
@@ -15,8 +17,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
+
+    # JWT login: POST {"username": ..., "password": ...} -> {"access": ..., "refresh": ...}
+    path("api/auth/token/", TokenObtainPairView.as_view(),
+         name="token_obtain_pair"),
+    path("api/auth/token/refresh/",
+         TokenRefreshView.as_view(), name="token_refresh"),
+
+    path("api/authz/", include("apps.authz.urls")),
+    path("api/catalog/", include("apps.catalog.urls")),
+    path("api/sales/", include("apps.sales.urls")),
 ]

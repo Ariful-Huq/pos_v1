@@ -212,3 +212,35 @@ def process_return(sale, return_lines, reason="", processed_by=None):
         sale.save(update_fields=["status"])
 
     return sale_return
+
+
+def remove_item(sale, item):
+    """Removes a line from a draft sale entirely. Only allowed while the
+    sale is still a draft — a completed sale's items are immutable
+    history; use process_return() to handle removing items after
+    completion."""
+    if sale.status != "draft":
+        raise ValueError("Cannot modify a sale that is not in draft status")
+    item.delete()
+    _recalculate_totals(sale)
+
+
+def update_item_quantity(sale, item, quantity):
+    """Changes the quantity on an existing draft-sale line (e.g. cashier
+    taps +/- in the cart) and recalculates the line total and sale
+    totals. Only allowed while the sale is still a draft."""
+    if sale.status != "draft":
+        raise ValueError("Cannot modify a sale that is not in draft status")
+
+    from decimal import Decimal
+    quantity = Decimal(str(quantity))
+    if quantity <= 0:
+        raise ValueError(
+            "Quantity must be greater than zero — use remove_item to delete a line")
+
+    item.quantity = quantity
+    item.line_total = (item.quantity * item.unit_price) - \
+        item.discount_amount + item.tax_amount
+    item.save(update_fields=["quantity", "line_total"])
+    _recalculate_totals(sale)
+    return item

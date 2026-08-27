@@ -17,6 +17,8 @@ FEATURES = [
     ("expenses.create", "expenses", "Create expense"),
     ("reports.view_financial", "reports", "View financial reports"),
     ("staff.manage", "staff", "Manage staff"),
+    ("catalog.view", "catalog", "View products/catalog"),
+    ("catalog.manage", "catalog", "Create/edit products"),
 ]
 
 ROLES = {
@@ -26,9 +28,12 @@ ROLES = {
         "inventory.view", "inventory.adjust",
         "purchases.view", "purchases.create",
         "expenses.view", "expenses.create",
-        "reports.view_financial",
+        "reports.view_financial", "catalog.view", "catalog.manage",
     ],
-    "cashier": ["sales.view", "sales.create", "inventory.view"],
+    "cashier": [
+        "sales.view", "sales.create", "inventory.view",
+        "catalog.view", "catalog.manage",
+    ],
 }
 
 
