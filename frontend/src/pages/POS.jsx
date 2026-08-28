@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Scan, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Scan, Plus, Trash2, CheckCircle2, PauseCircle, Clock } from "lucide-react";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import {
   createDraftSale,
+  listHeldSales,
   addItem,
   removeItem,
   updateItemQuantity,
   completeSale,
-  voidSale,
   lookupProduct,
 } from "../api/sales";
 
@@ -20,8 +20,10 @@ const PAYMENT_METHODS = [
 ];
 
 export default function POS() {
+  const [mode, setMode] = useState("loading"); // loading | choosing | checkout | completed
+  const [heldSales, setHeldSales] = useState([]);
+  const [emptyDraft, setEmptyDraft] = useState(null); // a reusable empty cart, if one exists
   const [sale, setSale] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [scanValue, setScanValue] = useState("");
   const [scanError, setScanError] = useState("");
   const [payments, setPayments] = useState([{ method: "cash", amount: "0", reference: "" }]);
@@ -30,28 +32,62 @@ export default function POS() {
   const [completedSale, setCompletedSale] = useState(null);
   const scanInputRef = useRef(null);
 
-  const startNewSale = useCallback(async () => {
-    setLoading(true);
-    setCompletedSale(null);
-    setCompleteError("");
-    try {
-      const newSale = await createDraftSale();
-      setSale(newSale);
-    } finally {
-      setLoading(false);
-      scanInputRef.current?.focus();
+  const loadHeldSales = useCallback(async () => {
+    setMode("loading");
+    const held = await listHeldSales();
+    // A draft with zero items isn't meaningfully "held" — it's either a
+    // fresh cart someone hasn't touched yet, or one abandoned by
+    // navigating away. Never show it as a held-sale card; reuse it as
+    // the next new sale instead of letting empty drafts pile up.
+    const withItems = held.filter((h) => h.items.length > 0);
+    const reusable = held.find((h) => h.items.length === 0) || null;
+    setEmptyDraft(reusable);
+
+    if (withItems.length === 0) {
+      if (reusable) {
+        setSale(reusable);
+      } else {
+        setSale(await createDraftSale());
+      }
+      setMode("checkout");
+    } else {
+      setHeldSales(withItems);
+      setMode("choosing");
     }
   }, []);
 
-  useEffect(() => { startNewSale(); }, [startNewSale]);
+  useEffect(() => { loadHeldSales(); }, [loadHeldSales]);
 
-  // Keep a single default payment row synced to the running total, so the
-  // common "pay in full with one method" case needs zero extra taps.
+  useEffect(() => {
+    if (mode === "checkout") scanInputRef.current?.focus();
+  }, [mode]);
+
+  // Keep a single default payment row synced to the running total.
   useEffect(() => {
     if (sale && payments.length === 1) {
       setPayments([{ ...payments[0], amount: sale.total_amount }]);
     }
   }, [sale?.total_amount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleStartNew() {
+    const newSale = emptyDraft || (await createDraftSale());
+    setSale(newSale);
+    setEmptyDraft(null);
+    setPayments([{ method: "cash", amount: "0", reference: "" }]);
+    setMode("checkout");
+  }
+
+  function handleResume(heldSale) {
+    setSale(heldSale);
+    setPayments([{ method: "cash", amount: heldSale.total_amount || "0", reference: "" }]);
+    setMode("checkout");
+  }
+
+  function handleHold() {
+    setSale(null);
+    setCompletedSale(null);
+    loadHeldSales();
+  }
 
   async function handleScan(e) {
     e.preventDefault();
@@ -71,13 +107,11 @@ export default function POS() {
 
   async function handleQuantityChange(itemId, quantity) {
     if (quantity < 1) return;
-    const updated = await updateItemQuantity(sale.id, itemId, quantity);
-    setSale(updated);
+    setSale(await updateItemQuantity(sale.id, itemId, quantity));
   }
 
   async function handleRemove(itemId) {
-    const updated = await removeItem(sale.id, itemId);
-    setSale(updated);
+    setSale(await removeItem(sale.id, itemId));
   }
 
   function updatePaymentLine(index, field, value) {
@@ -106,6 +140,7 @@ export default function POS() {
         payments.map((p) => ({ ...p, amount: parseFloat(p.amount) || 0 }))
       );
       setCompletedSale(result);
+      setMode("completed");
     } catch (err) {
       setCompleteError(err?.response?.data?.detail || "Couldn't complete the sale.");
     } finally {
@@ -113,7 +148,40 @@ export default function POS() {
     }
   }
 
-  if (completedSale) {
+  if (mode === "loading") {
+    return <div className="text-center text-ink-400 py-10">Loading…</div>;
+  }
+
+  if (mode === "choosing") {
+    return (
+      <div className="max-w-lg mx-auto space-y-4">
+        <h2 className="font-display font-semibold text-lg text-ink-900">Held sales</h2>
+        <div className="space-y-2">
+          {heldSales.map((h) => (
+            <button
+              key={h.id}
+              onClick={() => handleResume(h)}
+              className="w-full flex items-center justify-between bg-white border border-surface-200 rounded-xl p-4 hover:border-brand-500 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Clock size={18} className="text-ink-400" />
+                <div>
+                  <p className="font-medium text-ink-900">{h.items.length} item{h.items.length !== 1 ? "s" : ""}</p>
+                  <p className="text-xs text-ink-400">{h.customer_name || "Walk-in"}</p>
+                </div>
+              </div>
+              <span className="font-figures font-medium text-ink-900">৳{Number(h.total_amount).toFixed(2)}</span>
+            </button>
+          ))}
+        </div>
+        <Button variant="primary" className="w-full" onClick={handleStartNew}>
+          <Plus size={16} /> Start new sale
+        </Button>
+      </div>
+    );
+  }
+
+  if (mode === "completed" && completedSale) {
     return (
       <div className="max-w-md mx-auto bg-white rounded-xl border border-surface-200 p-8 text-center">
         <CheckCircle2 className="mx-auto text-brand-700 mb-3" size={40} />
@@ -124,14 +192,10 @@ export default function POS() {
         </p>
         <div className="flex gap-2 justify-center">
           <Button variant="outline" onClick={() => window.print()}>Print receipt</Button>
-          <Button variant="primary" onClick={startNewSale}>New sale</Button>
+          <Button variant="primary" onClick={handleStartNew}>New sale</Button>
         </div>
       </div>
     );
-  }
-
-  if (loading || !sale) {
-    return <div className="text-center text-ink-400 py-10">Starting a new sale…</div>;
   }
 
   return (
@@ -152,6 +216,9 @@ export default function POS() {
           </div>
           <Button type="submit" variant="brand">
             <Plus size={16} /> Add
+          </Button>
+          <Button type="button" variant="outline" onClick={handleHold}>
+            <PauseCircle size={16} /> Hold
           </Button>
         </form>
         {scanError && <p className="text-danger-600 text-sm">{scanError}</p>}

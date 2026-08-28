@@ -23,7 +23,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     path("admin/", admin.site.urls),
 
-    # JWT login: POST {"username": ..., "password": ...} -> {"access": ..., "refresh": ...}
     path("api/auth/token/", TokenObtainPairView.as_view(),
          name="token_obtain_pair"),
     path("api/auth/token/refresh/",
@@ -32,4 +31,9 @@ urlpatterns = [
     path("api/authz/", include("apps.authz.urls")),
     path("api/catalog/", include("apps.catalog.urls")),
     path("api/sales/", include("apps.sales.urls")),
+    path("api/purchases/", include("apps.purchases.urls")),
+    path("api/inventory/", include("apps.inventory.urls")),
+    path("api/expenses/", include("apps.expenses.urls")),
+    path("api/staff/", include("apps.staff.urls")),
+    path("api/accounting/", include("apps.accounting.urls")),
 ]

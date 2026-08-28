@@ -5,6 +5,11 @@ export async function createDraftSale(customerId = null) {
   return data;
 }
 
+export async function listHeldSales() {
+  const { data } = await client.get("/sales/sales/", { params: { status: "draft" } });
+  return data.results;
+}
+
 export async function addItem(saleId, { product, quantity = 1, unit_price }) {
   const { data } = await client.post(`/sales/sales/${saleId}/items/`, {
     product, quantity, unit_price,

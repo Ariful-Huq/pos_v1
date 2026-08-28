@@ -6,6 +6,11 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import POS from "./pages/POS";
+import Purchases from "./pages/Purchases";
+import Inventory from "./pages/Inventory";
+import Expenses from "./pages/Expenses";
+import Staff from "./pages/Staff";
+import Accounting from "./pages/Accounting";
 
 export default function App() {
   return (
@@ -24,8 +29,13 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="products" element={<Products />} />
             <Route path="sales" element={<POS />} />
+            <Route path="purchases" element={<Purchases />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="staff" element={<Staff />} />
+            <Route path="accounting" element={<Accounting />} />
             {/* Future feature pages register here as nested routes,
-                e.g. <Route path="purchases" element={<PurchasesPage />} /> */}
+                e.g. <Route path="reports" element={<ReportsPage />} /> */}
           </Route>
         </Routes>
       </AuthProvider>

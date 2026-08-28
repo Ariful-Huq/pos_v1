@@ -44,10 +44,19 @@ class SaleViewSet(viewsets.ModelViewSet):
     so creation and every state transition go through dedicated actions
     that call those service functions, rather than generic create/update.
     """
-    queryset = Sale.objects.prefetch_related(
-        "items", "payments").select_related("customer").order_by("-created_at")
+    queryset = Sale.objects.prefetch_related("items", "payments").select_related("customer").order_by("-created_at")
     serializer_class = SaleSerializer
     pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        qs = self.queryset
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(status=status_param)
+        branch = get_active_branch(self.request)
+        if branch:
+            qs = qs.filter(branch=branch)
+        return qs
 
     def get_required_feature(self, request, view):
         if self.action in ACTION_FEATURE_MAP:
@@ -63,8 +72,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         if not branch:
             return Response({"detail": "No branch available — create a Branch first."}, status=400)
 
-        sale = services.create_draft_sale(
-            branch=branch, created_by=request.user)
+        sale = services.create_draft_sale(branch=branch, created_by=request.user)
 
         customer_id = request.data.get("customer")
         if customer_id:
@@ -77,8 +85,7 @@ class SaleViewSet(viewsets.ModelViewSet):
     def add_item(self, request, pk=None):
         """POST /api/sales/sales/{id}/items/  { product, quantity, unit_price? }"""
         sale = self.get_object()
-        product = Product.objects.filter(
-            id=request.data.get("product")).first()
+        product = Product.objects.filter(id=request.data.get("product")).first()
         if not product:
             return Response({"detail": "Product not found"}, status=404)
 
@@ -118,8 +125,7 @@ class SaleViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Line item not found"}, status=404)
 
         try:
-            services.update_item_quantity(
-                sale, item, request.data.get("quantity"))
+            services.update_item_quantity(sale, item, request.data.get("quantity"))
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
 
@@ -133,8 +139,7 @@ class SaleViewSet(viewsets.ModelViewSet):
         payments = request.data.get("payments", [])
 
         try:
-            services.complete_sale(
-                sale, payments=payments, completed_by=request.user)
+            services.complete_sale(sale, payments=payments, completed_by=request.user)
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
 
@@ -145,8 +150,7 @@ class SaleViewSet(viewsets.ModelViewSet):
     def void(self, request, pk=None):
         sale = self.get_object()
         try:
-            services.void_sale(sale, reason=request.data.get(
-                "reason", ""), voided_by=request.user)
+            services.void_sale(sale, reason=request.data.get("reason", ""), voided_by=request.user)
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
 
