@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, PackageCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import DataTable from "../components/ui/DataTable";
@@ -18,6 +19,7 @@ const STATUS_TONE = {
 };
 
 export default function Purchases() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -60,17 +62,17 @@ export default function Purchases() {
   }
 
   const columns = [
-    { key: "reference_number", header: "Reference", sortable: true, render: (r) => (
+    { key: "reference_number", header: t("purchases.reference"), sortable: true, render: (r) => (
       <span className="font-figures">{r.reference_number}</span>
     )},
-    { key: "supplier_name", header: "Supplier", sortable: true },
-    { key: "order_date", header: "Order date", sortable: true },
-    { key: "status", header: "Status", render: (r) => (
+    { key: "supplier_name", header: t("purchases.supplier"), sortable: true },
+    { key: "order_date", header: t("purchases.orderDate"), sortable: true },
+    { key: "status", header: t("common.status"), render: (r) => (
       <Badge tone={STATUS_TONE[r.status]}>{r.status.replace("_", " ")}</Badge>
     )},
     { key: "actions", header: "", render: (r) => (
       <ActionMenu items={[
-        { label: "Receive items", icon: <PackageCheck size={14} />, disabled: r.status === "received", onClick: () => setReceiveTarget(r) },
+        { label: t("purchases.receiveItems"), icon: <PackageCheck size={14} />, disabled: r.status === "received", onClick: () => setReceiveTarget(r) },
       ]} />
     )},
   ];
@@ -78,18 +80,18 @@ export default function Purchases() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-ink-400">{orders.length} purchase order{orders.length !== 1 ? "s" : ""}</p>
+        <p className="text-sm text-ink-400">{t("purchases.count", { count: orders.length })}</p>
         <Button variant="primary" onClick={() => setFormOpen(true)}>
-          <Plus size={16} /> New Purchase Order
+          <Plus size={16} /> {t("purchases.newPO")}
         </Button>
       </div>
 
       {error && <p className="text-danger-600 text-sm">{error}</p>}
 
       {loading ? (
-        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">Loading…</div>
+        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">{t("common.loading")}</div>
       ) : (
-        <DataTable columns={columns} data={orders} rowKey={(r) => r.id} emptyLabel="No purchase orders yet." />
+        <DataTable columns={columns} data={orders} rowKey={(r) => r.id} emptyLabel={t("purchases.noOrders")} />
       )}
 
       <PurchaseOrderFormModal

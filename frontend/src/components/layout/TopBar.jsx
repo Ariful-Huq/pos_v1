@@ -1,9 +1,16 @@
-import { Menu, LogOut, User as UserIcon } from "lucide-react";
+import { Menu, LogOut, User as UserIcon, Languages } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import ActionMenu from "../ui/ActionMenu";
+import { setLanguage } from "../../i18n";
 
 export default function TopBar({ onOpenMobileMenu, title }) {
   const { user, logout, activeBranchId, switchBranch } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  function toggleLanguage() {
+    setLanguage(i18n.language === "bn" ? "en" : "bn");
+  }
 
   return (
     <header className="h-16 bg-white border-b border-surface-200 flex items-center justify-between px-4 md:px-6">
@@ -19,6 +26,15 @@ export default function TopBar({ onOpenMobileMenu, title }) {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={toggleLanguage}
+          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"
+          title={t("common.language")}
+        >
+          <Languages size={16} />
+          {i18n.language === "bn" ? "বাং" : "EN"}
+        </button>
+
         {user?.branch_access?.length > 1 && (
           <select
             value={activeBranchId || ""}
@@ -38,7 +54,7 @@ export default function TopBar({ onOpenMobileMenu, title }) {
           items={[
             { label: user?.username, icon: <UserIcon size={14} />, disabled: true },
             { divider: true },
-            { label: "Sign out", icon: <LogOut size={14} />, danger: true, onClick: logout },
+            { label: t("common.signOut"), icon: <LogOut size={14} />, danger: true, onClick: logout },
           ]}
         />
       </div>

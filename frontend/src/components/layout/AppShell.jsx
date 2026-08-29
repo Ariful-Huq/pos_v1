@@ -1,27 +1,30 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
-const TITLES = {
-  "/": "Dashboard",
-  "/sales": "Sales",
-  "/purchases": "Purchases",
-  "/inventory": "Inventory",
-  "/products": "Products",
-  "/expenses": "Expenses",
-  "/accounting": "Accounting",
-  "/staff": "Staff",
-  "/reports": "Reports",
-  "/settings": "Settings",
+const TITLE_KEYS = {
+  "/": "dashboard",
+  "/sales": "sales",
+  "/purchases": "purchases",
+  "/inventory": "inventory",
+  "/products": "products",
+  "/expenses": "expenses",
+  "/accounting": "accounting",
+  "/staff": "staff",
+  "/reports": "reports",
+  "/settings": "settings",
 };
 
 export default function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { t } = useTranslation();
 
-  const title = TITLES[location.pathname] || "POS";
+  const titleKey = TITLE_KEYS[location.pathname];
+  const title = titleKey ? t(`nav.${titleKey}`) : "POS";
 
   return (
     <div className="flex h-screen bg-surface-50">

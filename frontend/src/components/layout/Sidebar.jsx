@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -16,19 +17,20 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/sales", label: "Sales", icon: ShoppingCart },
-  { to: "/purchases", label: "Purchases", icon: Truck },
-  { to: "/inventory", label: "Inventory", icon: Boxes },
-  { to: "/products", label: "Products", icon: Package },
-  { to: "/expenses", label: "Expenses", icon: Wallet },
-  { to: "/accounting", label: "Accounting", icon: Receipt },
-  { to: "/staff", label: "Staff", icon: Users },
-  { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", key: "dashboard", icon: LayoutDashboard, end: true },
+  { to: "/sales", key: "sales", icon: ShoppingCart },
+  { to: "/purchases", key: "purchases", icon: Truck },
+  { to: "/inventory", key: "inventory", icon: Boxes },
+  { to: "/products", key: "products", icon: Package },
+  { to: "/expenses", key: "expenses", icon: Wallet },
+  { to: "/accounting", key: "accounting", icon: Receipt },
+  { to: "/staff", key: "staff", icon: Users },
+  { to: "/reports", key: "reports", icon: BarChart3 },
+  { to: "/settings", key: "settings", icon: Settings },
 ];
 
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }) {
+  const { t } = useTranslation();
   return (
     <>
       {/* Mobile drawer backdrop */}
@@ -68,7 +70,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+          {NAV_ITEMS.map(({ to, key, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -78,10 +80,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                  ${isActive ? "bg-white/15 text-white" : "text-brand-100/80 hover:bg-white/10 hover:text-white"}`
               }
-              title={collapsed ? label : undefined}
+              title={collapsed ? t(`nav.${key}`) : undefined}
             >
               <Icon size={18} className="shrink-0" />
-              {!collapsed && <span>{label}</span>}
+              {!collapsed && <span>{t(`nav.${key}`)}</span>}
             </NavLink>
           ))}
         </nav>

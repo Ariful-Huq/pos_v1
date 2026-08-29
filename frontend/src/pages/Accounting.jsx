@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import Tabs from "../components/ui/Tabs";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
@@ -9,6 +10,7 @@ const TYPE_TONE = {
 };
 
 export default function Accounting() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("accounts");
   const [accounts, setAccounts] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -25,12 +27,12 @@ export default function Accounting() {
   useEffect(() => { load(); }, [load]);
 
   const accountColumns = [
-    { key: "code", header: "Code", sortable: true, render: (r) => <span className="font-figures">{r.code}</span> },
-    { key: "name", header: "Account", sortable: true },
-    { key: "account_type", header: "Type", render: (r) => (
+    { key: "code", header: t("accounting.code"), sortable: true, render: (r) => <span className="font-figures">{r.code}</span> },
+    { key: "name", header: t("accounting.account"), sortable: true },
+    { key: "account_type", header: t("accounting.type"), render: (r) => (
       <Badge tone={TYPE_TONE[r.account_type]}>{r.account_type}</Badge>
     )},
-    { key: "balance", header: "Balance", sortable: true, render: (r) => (
+    { key: "balance", header: t("accounting.balance"), sortable: true, render: (r) => (
       <span className="font-figures font-medium">৳{Number(r.balance).toFixed(2)}</span>
     )},
   ];
@@ -39,22 +41,22 @@ export default function Accounting() {
     <div className="space-y-4">
       <Tabs
         tabs={[
-          { value: "accounts", label: "Chart of Accounts" },
-          { value: "journal", label: "Journal Entries" },
+          { value: "accounts", label: t("accounting.chartOfAccounts") },
+          { value: "journal", label: t("accounting.journalEntries") },
         ]}
         active={tab}
         onChange={setTab}
       />
 
       {loading ? (
-        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">Loading…</div>
+        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">{t("common.loading")}</div>
       ) : tab === "accounts" ? (
-        <DataTable columns={accountColumns} data={accounts} rowKey={(r) => r.id} emptyLabel="No accounts seeded yet." />
+        <DataTable columns={accountColumns} data={accounts} rowKey={(r) => r.id} emptyLabel={t("accounting.noAccounts")} />
       ) : (
         <div className="space-y-3">
           {entries.length === 0 && (
             <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">
-              No journal entries posted yet.
+              {t("accounting.noEntries")}
             </div>
           )}
           {entries.map((entry) => (

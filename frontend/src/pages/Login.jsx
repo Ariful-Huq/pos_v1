@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Languages } from "lucide-react";
 import { login } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import { setLanguage } from "../i18n";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -10,6 +13,11 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { reloadUser } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  function toggleLanguage() {
+    setLanguage(i18n.language === "bn" ? "en" : "bn");
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -20,30 +28,38 @@ export default function Login() {
       await reloadUser();
       navigate("/");
     } catch (err) {
-      setError("Incorrect username or password.");
+      setError(t("login.error"));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="min-h-screen flex flex-col md:flex-row relative">
+      <button
+        onClick={toggleLanguage}
+        className="absolute top-4 right-4 z-20 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg
+                   bg-white/10 hover:bg-white/20 text-white md:text-ink-700 md:bg-surface-100 md:hover:bg-surface-200"
+      >
+        <Languages size={16} />
+        {i18n.language === "bn" ? "বাং" : "EN"}
+      </button>
+
       {/* Brand panel — a barcode motif grounds this in the subject: retail, scanning, checkout */}
       <div className="relative md:w-1/2 bg-brand-700 text-white flex flex-col justify-between overflow-hidden px-10 py-12 md:px-16 md:py-16">
         <BarcodePattern />
         <div className="relative z-10">
           <span className="font-mono text-sm tracking-widest text-brand-100/80 uppercase">
-            Point of Sale
+            {t("login.tagline")}
           </span>
           <h1 className="mt-4 text-4xl md:text-5xl font-display font-semibold leading-tight">
-            Every branch,
+            {t("login.heading1")}
             <br />
-            one register.
+            {t("login.heading2")}
           </h1>
         </div>
         <p className="relative z-10 max-w-sm text-brand-100/70 text-sm">
-          Sales, stock, and staff across every branch — synced whether
-          you're online or not.
+          {t("login.subtext")}
         </p>
       </div>
 
@@ -51,14 +67,14 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center px-6 py-16 bg-surface-50">
         <form onSubmit={handleSubmit} className="w-full max-w-sm">
           <h2 className="text-2xl font-display font-semibold text-ink-900 mb-1">
-            Sign in
+            {t("login.signIn")}
           </h2>
           <p className="text-ink-400 text-sm mb-8">
-            Use the account your manager set up for you.
+            {t("login.signInSubtext")}
           </p>
 
           <label className="block text-sm font-medium text-ink-700 mb-1">
-            Username
+            {t("login.username")}
           </label>
           <input
             type="text"
@@ -71,7 +87,7 @@ export default function Login() {
           />
 
           <label className="block text-sm font-medium text-ink-700 mb-1">
-            Password
+            {t("login.password")}
           </label>
           <input
             type="password"
@@ -95,7 +111,7 @@ export default function Login() {
                        text-ink-900 font-semibold transition-colors disabled:opacity-60
                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
           >
-            {submitting ? "Signing in…" : "Sign in"}
+            {submitting ? t("login.signingIn") : t("login.signIn")}
           </button>
         </form>
       </div>

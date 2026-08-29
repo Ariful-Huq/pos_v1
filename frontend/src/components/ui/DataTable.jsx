@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
@@ -8,6 +9,7 @@ import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
  * pageSize: rows per page (default 10)
  */
 export default function DataTable({ columns, data, rowKey, pageSize = 10, emptyLabel = "No records found" }) {
+  const { t } = useTranslation();
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
@@ -86,7 +88,7 @@ export default function DataTable({ columns, data, rowKey, pageSize = 10, emptyL
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-surface-200">
           <span className="text-xs text-ink-400">
-            Page {page} of {totalPages}
+            {t("common.page")} {page} {t("common.of")} {totalPages}
           </span>
           <div className="flex gap-1">
             <button

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/ui/Modal";
 import Badge from "../components/ui/Badge";
 import { listMovements } from "../api/inventory";
@@ -14,6 +15,7 @@ const TYPE_TONE = {
 };
 
 export default function StockHistoryModal({ open, onClose, stockLevel }) {
+  const { t } = useTranslation();
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -27,11 +29,11 @@ export default function StockHistoryModal({ open, onClose, stockLevel }) {
   if (!stockLevel) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title={`History — ${stockLevel.product_name}`} size="lg">
+    <Modal open={open} onClose={onClose} title={`${t("inventory.history")} — ${stockLevel.product_name}`} size="lg">
       {loading ? (
-        <p className="text-center text-ink-400 py-6">Loading…</p>
+        <p className="text-center text-ink-400 py-6">{t("common.loading")}</p>
       ) : movements.length === 0 ? (
-        <p className="text-center text-ink-400 py-6">No movements recorded yet.</p>
+        <p className="text-center text-ink-400 py-6">{t("inventory.noMovements")}</p>
       ) : (
         <div className="max-h-96 overflow-y-auto space-y-2">
           {movements.map((m) => (

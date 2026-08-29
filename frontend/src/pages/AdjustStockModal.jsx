@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { adjustStock } from "../api/inventory";
 
 export default function AdjustStockModal({ open, onClose, stockLevel, onAdjusted }) {
+  const { t } = useTranslation();
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -37,24 +39,24 @@ export default function AdjustStockModal({ open, onClose, stockLevel, onAdjusted
     <Modal
       open={open}
       onClose={onClose}
-      title={`Adjust stock — ${stockLevel.product_name}`}
+      title={`${t("inventory.adjustStock")} — ${stockLevel.product_name}`}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t("common.cancel")}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={saving || !quantity}>
-            {saving ? "Saving…" : "Apply adjustment"}
+            {saving ? t("common.saving") : t("inventory.applyAdjustment")}
           </Button>
         </>
       }
     >
       <form className="space-y-3" onSubmit={handleSubmit}>
         <p className="text-sm text-ink-400">
-          Current stock: <span className="font-figures text-ink-900">{stockLevel.quantity}</span>
+          {t("inventory.currentStock")}: <span className="font-figures text-ink-900">{stockLevel.quantity}</span>
         </p>
 
         <label className="block">
           <span className="block text-sm font-medium text-ink-700 mb-1">
-            Adjustment (use a negative number to remove stock)
+            {t("inventory.adjustmentLabel")}
           </span>
           <input
             type="number"
@@ -69,11 +71,10 @@ export default function AdjustStockModal({ open, onClose, stockLevel, onAdjusted
         </label>
 
         <label className="block">
-          <span className="block text-sm font-medium text-ink-700 mb-1">Reason</span>
+          <span className="block text-sm font-medium text-ink-700 mb-1">{t("inventory.reason")}</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Damaged during delivery, stock count correction…"
             rows={2}
             className="input"
           />

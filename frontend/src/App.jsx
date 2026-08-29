@@ -11,6 +11,7 @@ import Inventory from "./pages/Inventory";
 import Expenses from "./pages/Expenses";
 import Staff from "./pages/Staff";
 import Accounting from "./pages/Accounting";
+import Reports from "./pages/Reports";
 
 export default function App() {
   return (
@@ -34,8 +35,7 @@ export default function App() {
             <Route path="expenses" element={<Expenses />} />
             <Route path="staff" element={<Staff />} />
             <Route path="accounting" element={<Accounting />} />
-            {/* Future feature pages register here as nested routes,
-                e.g. <Route path="reports" element={<ReportsPage />} /> */}
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Routes>
       </AuthProvider>

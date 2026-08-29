@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { History, SlidersHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Badge from "../components/ui/Badge";
 import DataTable from "../components/ui/DataTable";
 import ActionMenu from "../components/ui/ActionMenu";
@@ -10,6 +11,7 @@ import { listStockLevels } from "../api/inventory";
 const LOW_STOCK_THRESHOLD = 10;
 
 export default function Inventory() {
+  const { t } = useTranslation();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,39 +39,39 @@ export default function Inventory() {
   }
 
   const columns = [
-    { key: "product_sku", header: "SKU", sortable: true, render: (r) => (
+    { key: "product_sku", header: t("inventory.sku"), sortable: true, render: (r) => (
       <span className="font-figures">{r.product_sku}</span>
     )},
-    { key: "product_name", header: "Product", sortable: true },
-    { key: "branch_name", header: "Branch", sortable: true },
-    { key: "quantity", header: "Stock", sortable: true, render: (r) => (
+    { key: "product_name", header: t("inventory.product"), sortable: true },
+    { key: "branch_name", header: t("inventory.branch"), sortable: true },
+    { key: "quantity", header: t("inventory.stock"), sortable: true, render: (r) => (
       <span className="font-figures font-medium">{r.quantity}</span>
     )},
     { key: "status", header: "", render: (r) => (
       Number(r.quantity) <= 0
-        ? <Badge tone="danger">Out of stock</Badge>
+        ? <Badge tone="danger">{t("inventory.outOfStock")}</Badge>
         : Number(r.quantity) <= LOW_STOCK_THRESHOLD
-          ? <Badge tone="warning">Low stock</Badge>
+          ? <Badge tone="warning">{t("inventory.lowStock")}</Badge>
           : null
     )},
     { key: "actions", header: "", render: (r) => (
       <ActionMenu items={[
-        { label: "Adjust stock", icon: <SlidersHorizontal size={14} />, onClick: () => setAdjustTarget(r) },
-        { label: "View history", icon: <History size={14} />, onClick: () => setHistoryTarget(r) },
+        { label: t("inventory.adjustStock"), icon: <SlidersHorizontal size={14} />, onClick: () => setAdjustTarget(r) },
+        { label: t("inventory.viewHistory"), icon: <History size={14} />, onClick: () => setHistoryTarget(r) },
       ]} />
     )},
   ];
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-400">{levels.length} stock record{levels.length !== 1 ? "s" : ""}</p>
+      <p className="text-sm text-ink-400">{t("inventory.count", { count: levels.length })}</p>
 
       {error && <p className="text-danger-600 text-sm">{error}</p>}
 
       {loading ? (
-        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">Loading…</div>
+        <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">{t("common.loading")}</div>
       ) : (
-        <DataTable columns={columns} data={levels} rowKey={(r) => r.id} emptyLabel="No stock movements recorded yet." />
+        <DataTable columns={columns} data={levels} rowKey={(r) => r.id} emptyLabel={t("inventory.noRecords")} />
       )}
 
       <AdjustStockModal

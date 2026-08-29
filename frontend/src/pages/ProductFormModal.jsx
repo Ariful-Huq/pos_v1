@@ -1,6 +1,5 @@
-// frontend/src/pages/ProductFormModal.jsx
-
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 
@@ -15,6 +14,7 @@ const EMPTY = {
 };
 
 export default function ProductFormModal({ open, onClose, onSubmit, categories, units, initial }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -47,19 +47,19 @@ export default function ProductFormModal({ open, onClose, onSubmit, categories, 
     <Modal
       open={open}
       onClose={onClose}
-      title={initial ? "Edit product" : "Add product"}
+      title={initial ? t("products.editProduct") : t("products.addProduct")}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t("common.cancel")}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving…" : "Save product"}
+            {saving ? t("common.saving") : t("products.saveProduct")}
           </Button>
         </>
       }
     >
       <form className="space-y-3" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="SKU">
+          <Field label={t("products.sku")}>
             <input
               value={form.sku}
               onChange={(e) => set("sku", e.target.value)}
@@ -67,7 +67,7 @@ export default function ProductFormModal({ open, onClose, onSubmit, categories, 
               className="input font-figures"
             />
           </Field>
-          <Field label="Name">
+          <Field label={t("products.name")}>
             <input
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
@@ -78,17 +78,17 @@ export default function ProductFormModal({ open, onClose, onSubmit, categories, 
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Category">
+          <Field label={t("products.category")}>
             <select value={form.category} onChange={(e) => set("category", e.target.value)} className="input">
-              <option value="">— None —</option>
+              <option value="">{t("common.none")}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </Field>
-          <Field label="Base unit">
+          <Field label={t("products.baseUnit")}>
             <select value={form.base_unit} onChange={(e) => set("base_unit", e.target.value)} required className="input">
-              <option value="">Select…</option>
+              <option value="">{t("common.selectEllipsis")}</option>
               {units.map((u) => (
                 <option key={u.id} value={u.id}>{u.code}</option>
               ))}
@@ -97,13 +97,13 @@ export default function ProductFormModal({ open, onClose, onSubmit, categories, 
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Cost price">
+          <Field label={t("products.costPrice")}>
             <input type="number" step="0.01" value={form.cost_price} onChange={(e) => set("cost_price", e.target.value)} className="input font-figures" />
           </Field>
-          <Field label="Selling price">
+          <Field label={t("products.sellingPrice")}>
             <input type="number" step="0.01" value={form.selling_price} onChange={(e) => set("selling_price", e.target.value)} required className="input font-figures" />
           </Field>
-          <Field label="Tax %">
+          <Field label={t("products.taxPercent")}>
             <input type="number" step="0.01" value={form.tax_rate} onChange={(e) => set("tax_rate", e.target.value)} className="input font-figures" />
           </Field>
         </div>

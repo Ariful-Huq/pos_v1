@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 
 const EMPTY_LINE = { product: "", quantity_ordered: "1", unit_cost: "0" };
 
 export default function PurchaseOrderFormModal({ open, onClose, onSubmit, suppliers, products }) {
+  const { t } = useTranslation();
   const [supplier, setSupplier] = useState("");
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState("");
@@ -63,13 +65,13 @@ export default function PurchaseOrderFormModal({ open, onClose, onSubmit, suppli
     <Modal
       open={open}
       onClose={onClose}
-      title="New purchase order"
+      title={t("purchases.newPOTitle")}
       size="lg"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t("common.cancel")}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving…" : "Create purchase order"}
+            {saving ? t("common.saving") : t("purchases.createPO")}
           </Button>
         </>
       }
@@ -77,29 +79,29 @@ export default function PurchaseOrderFormModal({ open, onClose, onSubmit, suppli
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-3 gap-3">
           <label className="block">
-            <span className="block text-sm font-medium text-ink-700 mb-1">Supplier</span>
+            <span className="block text-sm font-medium text-ink-700 mb-1">{t("purchases.supplier")}</span>
             <select value={supplier} onChange={(e) => setSupplier(e.target.value)} required className="input">
-              <option value="">Select…</option>
+              <option value="">{t("common.selectEllipsis")}</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </label>
           <label className="block">
-            <span className="block text-sm font-medium text-ink-700 mb-1">Order date</span>
+            <span className="block text-sm font-medium text-ink-700 mb-1">{t("purchases.orderDate")}</span>
             <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required className="input" />
           </label>
           <label className="block">
-            <span className="block text-sm font-medium text-ink-700 mb-1">Expected date</span>
+            <span className="block text-sm font-medium text-ink-700 mb-1">{t("purchases.expectedDate")}</span>
             <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="input" />
           </label>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-ink-700">Items</span>
+            <span className="text-sm font-medium text-ink-700">{t("purchases.items")}</span>
             <button type="button" onClick={addLine} className="text-xs text-brand-700 hover:underline flex items-center gap-1">
-              <Plus size={14} /> Add line
+              <Plus size={14} /> {t("purchases.addLine")}
             </button>
           </div>
 
@@ -111,19 +113,19 @@ export default function PurchaseOrderFormModal({ open, onClose, onSubmit, suppli
                   onChange={(e) => updateLine(i, "product", e.target.value)}
                   className="input flex-1"
                 >
-                  <option value="">Select product…</option>
+                  <option value="">{t("common.selectEllipsis")}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>
                   ))}
                 </select>
                 <input
-                  type="number" min="1" placeholder="Qty"
+                  type="number" min="1" placeholder={t("pos.qty")}
                   value={line.quantity_ordered}
                   onChange={(e) => updateLine(i, "quantity_ordered", e.target.value)}
                   className="input w-24 font-figures"
                 />
                 <input
-                  type="number" step="0.01" placeholder="Unit cost"
+                  type="number" step="0.01" placeholder={t("products.costPrice")}
                   value={line.unit_cost}
                   onChange={(e) => updateLine(i, "unit_cost", e.target.value)}
                   className="input w-28 font-figures"

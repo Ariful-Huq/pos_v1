@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import { receiveItem } from "../api/purchases";
 
 export default function ReceivePurchaseModal({ open, onClose, purchaseOrder, onReceived }) {
+  const { t } = useTranslation();
   const [quantities, setQuantities] = useState({});
   const [busyItemId, setBusyItemId] = useState(null);
   const [error, setError] = useState("");
@@ -28,7 +30,7 @@ export default function ReceivePurchaseModal({ open, onClose, purchaseOrder, onR
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Receive — ${purchaseOrder.reference_number}`} size="lg">
+    <Modal open={open} onClose={onClose} title={`${t("purchases.receiveItems")} — ${purchaseOrder.reference_number}`} size="lg">
       <div className="space-y-3">
         {purchaseOrder.items.map((item) => {
           const remaining = item.quantity_ordered - item.quantity_received;
@@ -37,19 +39,19 @@ export default function ReceivePurchaseModal({ open, onClose, purchaseOrder, onR
               <div>
                 <div className="font-medium text-ink-900">{item.product_name}</div>
                 <div className="font-figures text-xs text-ink-400">
-                  {item.product_sku} — ordered {item.quantity_ordered}, received {item.quantity_received}
+                  {item.product_sku} — {item.quantity_ordered} / {item.quantity_received}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {remaining <= 0 ? (
-                  <Badge tone="success">Fully received</Badge>
+                  <Badge tone="success">{t("purchases.fullyReceived")}</Badge>
                 ) : (
                   <>
                     <input
                       type="number"
                       min="0"
                       max={remaining}
-                      placeholder={`up to ${remaining}`}
+                      placeholder={`${remaining}`}
                       value={quantities[item.id] || ""}
                       onChange={(e) => setQuantities((q) => ({ ...q, [item.id]: e.target.value }))}
                       className="input w-24 font-figures"
@@ -60,7 +62,7 @@ export default function ReceivePurchaseModal({ open, onClose, purchaseOrder, onR
                       disabled={busyItemId === item.id}
                       onClick={() => handleReceive(item)}
                     >
-                      {busyItemId === item.id ? "…" : "Receive"}
+                      {busyItemId === item.id ? "…" : t("purchases.receive")}
                     </Button>
                   </>
                 )}
