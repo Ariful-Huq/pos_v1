@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
-import DataTable from "../components/ui/DataTable";
-import ActionMenu from "../components/ui/ActionMenu";
-import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import DataTable from "../../components/ui/DataTable";
+import ActionMenu from "../../components/ui/ActionMenu";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ProductFormModal from "./ProductFormModal";
 import {
   listProducts,
@@ -14,7 +14,7 @@ import {
   deleteProduct,
   listCategories,
   listUnits,
-} from "../api/catalog";
+} from "../../api/catalog";
 
 export default function Products() {
   const { t } = useTranslation();

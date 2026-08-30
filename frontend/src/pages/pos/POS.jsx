@@ -1,8 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Scan, Plus, Trash2, CheckCircle2, PauseCircle, Clock } from "lucide-react";
+import {
+  Scan,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  PauseCircle,
+  Clock,
+  Search,
+  PackageSearch,
+  Loader2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import Tabs from "../../components/ui/Tabs";
 import {
   createDraftSale,
   listHeldSales,
@@ -11,9 +22,19 @@ import {
   updateItemQuantity,
   completeSale,
   lookupProduct,
-} from "../api/sales";
+} from "../../api/sales";
+import { listProducts, listCategories } from "../../api/catalog";
 
 const PAYMENT_METHOD_KEYS = ["cash", "card", "mobile_banking", "store_credit"];
+const CATALOG_PAGE_SIZE = 24;
+
+function getProductPrice(product) {
+  return product.selling_price ?? 0;
+}
+
+function getProductCategoryLabel(product) {
+  return product.category_name || null;
+}
 
 export default function POS() {
   const { t } = useTranslation();
@@ -35,6 +56,18 @@ export default function POS() {
   const [completeError, setCompleteError] = useState("");
   const [completedSale, setCompletedSale] = useState(null);
   const scanInputRef = useRef(null);
+
+  // --- Product catalog picker ---
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [catalogSearchInput, setCatalogSearchInput] = useState("");
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState("");
+  const [productsPage, setProductsPage] = useState(1);
+  const [hasMoreProducts, setHasMoreProducts] = useState(false);
+  const [addingProductId, setAddingProductId] = useState(null);
 
   const loadHeldSales = useCallback(async () => {
     setMode("loading");
@@ -63,6 +96,79 @@ export default function POS() {
       setPayments([{ ...payments[0], amount: sale.total_amount }]);
     }
   }, [sale?.total_amount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Categories rarely change — load once.
+  useEffect(() => {
+    listCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
+
+  // Debounce the catalog search box so we don't fire a request per keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => setCatalogSearch(catalogSearchInput.trim()), 350);
+    return () => clearTimeout(timeout);
+  }, [catalogSearchInput]);
+
+  // Reload the product grid whenever the search term or category changes.
+  useEffect(() => {
+    if (mode !== "checkout") return;
+    let cancelled = false;
+    setProductsLoading(true);
+    setProductsError("");
+    listProducts({
+      search: catalogSearch || undefined,
+      category: activeCategory !== "all" ? activeCategory : undefined,
+      page: 1,
+      page_size: CATALOG_PAGE_SIZE,
+    })
+      .then((data) => {
+        if (cancelled) return;
+        setProducts(data.results || []);
+        setHasMoreProducts(Boolean(data.next));
+        setProductsPage(1);
+      })
+      .catch(() => {
+        if (!cancelled) setProductsError(t("pos.couldntLoadProducts"));
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [mode, catalogSearch, activeCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleLoadMoreProducts() {
+    const nextPage = productsPage + 1;
+    setProductsLoading(true);
+    try {
+      const data = await listProducts({
+        search: catalogSearch || undefined,
+        category: activeCategory !== "all" ? activeCategory : undefined,
+        page: nextPage,
+        page_size: CATALOG_PAGE_SIZE,
+      });
+      setProducts((prev) => [...prev, ...(data.results || [])]);
+      setHasMoreProducts(Boolean(data.next));
+      setProductsPage(nextPage);
+    } catch {
+      setProductsError(t("pos.couldntLoadMoreProducts"));
+    } finally {
+      setProductsLoading(false);
+    }
+  }
+
+  async function handleAddProduct(product) {
+    setAddingProductId(product.id);
+    setScanError("");
+    try {
+      const updated = await addItem(sale.id, { product: product.id, quantity: 1 });
+      setSale(updated);
+    } catch {
+      setScanError(t("pos.couldntAddProduct", { name: product.name }));
+    } finally {
+      setAddingProductId(null);
+    }
+  }
 
   async function handleStartNew() {
     const newSale = emptyDraft || (await createDraftSale());
@@ -193,8 +299,14 @@ export default function POS() {
     );
   }
 
+  const categoryTabs = [
+    { value: "all", label: t("pos.all") },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Scan + catalog */}
       <div className="lg:col-span-2 space-y-4">
         <form onSubmit={handleScan} className="flex gap-2">
           <div className="relative flex-1">
@@ -217,52 +329,136 @@ export default function POS() {
         </form>
         {scanError && <p className="text-danger-600 text-sm">{scanError}</p>}
 
-        <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
-          {sale.items.length === 0 ? (
-            <p className="text-center text-ink-400 py-12">{t("pos.emptyCart")}</p>
+        {/* Product catalog picker */}
+        <div className="bg-white rounded-xl border border-surface-200 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-display font-semibold text-sm text-ink-900">{t("pos.browseProducts")}</h3>
+            <div className="relative w-56">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" size={14} />
+              <input
+                value={catalogSearchInput}
+                onChange={(e) => setCatalogSearchInput(e.target.value)}
+                placeholder={t("pos.searchNameOrSku")}
+                className="input !pl-8 text-sm py-1.5"
+              />
+            </div>
+          </div>
+
+          {categoryTabs.length > 1 && (
+            <Tabs tabs={categoryTabs} active={activeCategory} onChange={setActiveCategory} />
+          )}
+
+          {productsError && <p className="text-danger-600 text-sm">{productsError}</p>}
+
+          {products.length === 0 && !productsLoading ? (
+            <div className="text-center text-ink-400 py-10">
+              <PackageSearch className="mx-auto mb-2" size={28} />
+              <p className="text-sm">{t("pos.noProductsMatch")}</p>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-surface-50 border-b border-surface-200 text-left text-xs uppercase text-ink-400">
-                  <th className="px-4 py-3">{t("pos.item")}</th>
-                  <th className="px-4 py-3">{t("pos.qty")}</th>
-                  <th className="px-4 py-3">{t("pos.price")}</th>
-                  <th className="px-4 py-3">{t("pos.total")}</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sale.items.map((item) => (
-                  <tr key={item.id} className="border-b border-surface-100 last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-ink-900">{item.product_name}</div>
-                      <div className="font-figures text-xs text-ink-400">{item.product_sku}</div>
-                    </td>
-                    <td className="px-4 py-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[34rem] overflow-y-auto pr-1">
+              {products.map((product) => {
+                const categoryLabel = getProductCategoryLabel(product);
+                const adding = addingProductId === product.id;
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    disabled={adding}
+                    onClick={() => handleAddProduct(product)}
+                    className="text-left bg-white border border-surface-200 rounded-lg p-3
+                               hover:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed
+                               flex flex-col gap-1"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium text-ink-900 text-sm leading-snug line-clamp-2">
+                        {product.name}
+                      </span>
+                      {adding && <Loader2 size={14} className="animate-spin text-brand-700 shrink-0 mt-0.5" />}
+                    </div>
+                    <span className="font-figures text-xs text-ink-400">SKU {product.sku}</span>
+                    <div className="flex items-center justify-between pt-1">
+                      {categoryLabel ? (
+                        <Badge tone="neutral">{categoryLabel}</Badge>
+                      ) : <span />}
+                      <span className="font-figures font-medium text-sm text-ink-900">
+                        ৳{Number(getProductPrice(product)).toFixed(2)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {productsLoading && products.length === 0 && (
+            <div className="flex items-center justify-center py-6 text-ink-400 text-sm gap-2">
+              <Loader2 size={16} className="animate-spin" /> {t("pos.loadingProducts")}
+            </div>
+          )}
+
+          {hasMoreProducts && (
+            <div className="text-center pt-1">
+              <button
+                onClick={handleLoadMoreProducts}
+                disabled={productsLoading}
+                className="text-xs text-brand-700 hover:underline disabled:opacity-60"
+              >
+                {productsLoading ? t("pos.loading") : t("pos.loadMore")}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cart + payment panel */}
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-surface-200 flex items-center justify-between">
+            <h3 className="font-display font-semibold text-sm text-ink-900">{t("pos.cart")}</h3>
+            {sale.items.length > 0 && (
+              <span className="text-xs text-ink-400">
+                {sale.items.length} item{sale.items.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          {sale.items.length === 0 ? (
+            <p className="text-center text-ink-400 py-10 text-sm px-4">{t("pos.emptyCart")}</p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto divide-y divide-surface-100">
+              {sale.items.map((item) => (
+                <div key={item.id} className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-ink-900 text-sm truncate">{item.product_name}</p>
+                    <p className="font-figures text-xs text-ink-400">{item.product_sku}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
                       <input
                         type="number"
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                        className="w-16 px-2 py-1 rounded-lg border border-surface-200 font-figures text-sm"
+                        className="w-14 px-1.5 py-1 rounded-lg border border-surface-200 font-figures text-xs"
                       />
-                    </td>
-                    <td className="px-4 py-3 font-figures">৳{Number(item.unit_price).toFixed(2)}</td>
-                    <td className="px-4 py-3 font-figures font-medium">৳{Number(item.line_total).toFixed(2)}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => handleRemove(item.id)} className="text-danger-500 hover:text-danger-600">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span className="font-figures text-xs text-ink-400">
+                        × ৳{Number(item.unit_price).toFixed(2)}
+                      </span>
+                      <span className="font-figures text-sm font-medium text-ink-900 ml-auto">
+                        ৳{Number(item.line_total).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemove(item.id)}
+                    className="text-danger-500 hover:text-danger-600 shrink-0"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      </div>
 
-      <div className="space-y-4">
         <div className="bg-white rounded-xl border border-surface-200 p-4 space-y-2">
           <Row label={t("pos.subtotal")} value={sale.subtotal} />
           <Row label={t("pos.discount")} value={sale.discount_amount} negative />

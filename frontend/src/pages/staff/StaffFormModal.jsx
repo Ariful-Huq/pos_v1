@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Button from "../components/ui/Button";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
 
 const EMPTY = {
   username: "", password: "", first_name: "", last_name: "", email: "",

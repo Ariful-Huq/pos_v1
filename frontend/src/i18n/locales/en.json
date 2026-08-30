@@ -90,7 +90,18 @@
     "methodCard": "Card",
     "methodMobileBanking": "Mobile Banking",
     "methodStoreCredit": "Store Credit",
-    "methodBank": "Bank Transfer"
+    "methodBank": "Bank Transfer",
+    "browseProducts": "Browse products",
+    "searchNameOrSku": "Search name or SKU",
+    "all": "All",
+    "noProductsMatch": "No products match.",
+    "loadingProducts": "Loading products…",
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "couldntLoadProducts": "Couldn't load products.",
+    "couldntLoadMoreProducts": "Couldn't load more products.",
+    "couldntAddProduct": "Couldn't add {{name}} to the cart.",
+    "cart": "Cart"
   },
   "purchases": {
     "count_one": "{{count}} purchase order",
@@ -191,5 +202,33 @@
     "revenue": "Revenue",
     "noSalesPeriod": "No sales in this period.",
     "daysLabel": "{{count}} days"
+  },
+  "dashboard": {
+    "todaysSales": "Today's Sales",
+    "todaysExpenses": "Today's Expenses",
+    "outOfStock": "Out of Stock",
+    "lowStock": "Low Stock",
+    "recentSales": "Recent Sales",
+    "invoice": "Invoice",
+    "customer": "Customer",
+    "noSales": "No completed sales yet."
+  },
+  "settings": {
+    "businessProfile": "Business Profile",
+    "branches": "Branches",
+    "businessName": "Business name",
+    "legalName": "Legal name",
+    "contactEmail": "Contact email",
+    "contactPhone": "Contact phone",
+    "saved": "Saved",
+    "addBranch": "Add Branch",
+    "editBranch": "Edit branch",
+    "branchName": "Branch name",
+    "branchCode": "Branch code",
+    "address": "Address",
+    "phone": "Phone",
+    "noBranches": "No branches yet.",
+    "deleteBranchTitle": "Delete this branch?",
+    "deleteBranchMessage": "\"{{name}}\" will be permanently removed. This is only possible if it has no sales, stock, or accounting history."
   }
 }

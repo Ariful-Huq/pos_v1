@@ -35,30 +35,97 @@ def create_draft_sale(branch, terminal=None, customer=None, created_by=None):
 
 
 def add_item(sale, product, quantity, unit_price=None, discount_amount=Decimal("0"), tax_amount=Decimal("0")):
-    """Adds (or updates) a line on a draft sale. unit_price defaults to
-    the product's current selling_price if not given, but is captured as
-    a snapshot on the SaleItem — later catalog price changes never affect
-    an existing sale."""
-    if sale.status != "draft":
-        raise ValueError("Cannot modify a sale that is not in draft status")
+    """
+    Adds a line to a draft sale — or, if this product (at the same
+    unit_price) is already on the cart, INCREMENTS that existing line's
+    quantity instead of creating a duplicate row. This is what makes
+    repeatedly clicking the same product in the POS catalog picker behave
+    like a real till (quantity goes up on one line), not like a bug
+    (a new line per click).
 
+    The whole operation locks the Sale row (select_for_update) inside a
+    transaction, so rapid/overlapping add_item calls for the same sale —
+    e.g. a cashier clicking a product several times before the first
+    request finishes — serialize instead of racing on the totals
+    recalculation below. Without this lock, two nearly-simultaneous
+    requests could each read the item list before the other's new/updated
+    row committed, silently under-counting the total.
+    """
     if unit_price is None:
         unit_price = product.selling_price
 
-    quantity = Decimal(quantity)
-    unit_price = Decimal(unit_price)
-    line_total = (quantity * unit_price) - discount_amount + tax_amount
+    quantity = Decimal(str(quantity))
+    unit_price = Decimal(str(unit_price))
 
-    item = SaleItem.objects.create(
-        sale=sale,
-        product=product,
-        quantity=quantity,
-        unit_price=unit_price,
-        discount_amount=discount_amount,
-        tax_amount=tax_amount,
-        line_total=line_total,
-    )
-    _recalculate_totals(sale)
+    with transaction.atomic():
+        locked_sale = Sale.objects.select_for_update().get(pk=sale.pk)
+
+        if locked_sale.status != "draft":
+            raise ValueError(
+                "Cannot modify a sale that is not in draft status")
+
+        existing_item = locked_sale.items.filter(
+            product=product, unit_price=unit_price).first()
+
+        if existing_item:
+            existing_item.quantity += quantity
+            existing_item.line_total = (
+                existing_item.quantity * existing_item.unit_price
+                - existing_item.discount_amount
+                + existing_item.tax_amount
+            )
+            existing_item.save(update_fields=["quantity", "line_total"])
+            item = existing_item
+        else:
+            line_total = (quantity * unit_price) - discount_amount + tax_amount
+            item = SaleItem.objects.create(
+                sale=locked_sale,
+                product=product,
+                quantity=quantity,
+                unit_price=unit_price,
+                discount_amount=discount_amount,
+                tax_amount=tax_amount,
+                line_total=line_total,
+            )
+
+        _recalculate_totals(locked_sale)
+
+    return item
+
+
+def remove_item(sale, item):
+    """Removes a line from a draft sale entirely. Locks the sale row for
+    the same race-safety reason as add_item()."""
+    with transaction.atomic():
+        locked_sale = Sale.objects.select_for_update().get(pk=sale.pk)
+        if locked_sale.status != "draft":
+            raise ValueError(
+                "Cannot modify a sale that is not in draft status")
+        item.delete()
+        _recalculate_totals(locked_sale)
+
+
+def update_item_quantity(sale, item, quantity):
+    """Changes the quantity on an existing draft-sale line (e.g. cashier
+    edits the quantity box directly) and recalculates totals. Locks the
+    sale row for the same race-safety reason as add_item()."""
+    with transaction.atomic():
+        locked_sale = Sale.objects.select_for_update().get(pk=sale.pk)
+        if locked_sale.status != "draft":
+            raise ValueError(
+                "Cannot modify a sale that is not in draft status")
+
+        quantity = Decimal(str(quantity))
+        if quantity <= 0:
+            raise ValueError(
+                "Quantity must be greater than zero — use remove_item to delete a line")
+
+        item.quantity = quantity
+        item.line_total = (item.quantity * item.unit_price) - \
+            item.discount_amount + item.tax_amount
+        item.save(update_fields=["quantity", "line_total"])
+        _recalculate_totals(locked_sale)
+
     return item
 
 
@@ -212,35 +279,3 @@ def process_return(sale, return_lines, reason="", processed_by=None):
         sale.save(update_fields=["status"])
 
     return sale_return
-
-
-def remove_item(sale, item):
-    """Removes a line from a draft sale entirely. Only allowed while the
-    sale is still a draft — a completed sale's items are immutable
-    history; use process_return() to handle removing items after
-    completion."""
-    if sale.status != "draft":
-        raise ValueError("Cannot modify a sale that is not in draft status")
-    item.delete()
-    _recalculate_totals(sale)
-
-
-def update_item_quantity(sale, item, quantity):
-    """Changes the quantity on an existing draft-sale line (e.g. cashier
-    taps +/- in the cart) and recalculates the line total and sale
-    totals. Only allowed while the sale is still a draft."""
-    if sale.status != "draft":
-        raise ValueError("Cannot modify a sale that is not in draft status")
-
-    from decimal import Decimal
-    quantity = Decimal(str(quantity))
-    if quantity <= 0:
-        raise ValueError(
-            "Quantity must be greater than zero — use remove_item to delete a line")
-
-    item.quantity = quantity
-    item.line_total = (item.quantity * item.unit_price) - \
-        item.discount_amount + item.tax_amount
-    item.save(update_fields=["quantity", "line_total"])
-    _recalculate_totals(sale)
-    return item

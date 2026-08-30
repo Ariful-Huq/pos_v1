@@ -42,6 +42,34 @@
     "signingIn": "সাইন ইন হচ্ছে…",
     "error": "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।"
   },
+  "settings": {
+    "businessProfile": "ব্যবসার প্রোফাইল",
+    "branches": "শাখাসমূহ",
+    "businessName": "ব্যবসার নাম",
+    "legalName": "আইনি নাম",
+    "contactEmail": "যোগাযোগের ইমেইল",
+    "contactPhone": "যোগাযোগের ফোন",
+    "saved": "সংরক্ষিত হয়েছে",
+    "addBranch": "শাখা যোগ করুন",
+    "editBranch": "শাখা সম্পাদনা করুন",
+    "branchName": "শাখার নাম",
+    "branchCode": "শাখার কোড",
+    "address": "ঠিকানা",
+    "phone": "ফোন",
+    "noBranches": "এখনও কোনো শাখা যোগ করা হয়নি।",
+    "deleteBranchTitle": "এই শাখাটি মুছে ফেলবেন?",
+    "deleteBranchMessage": "\"{{name}}\" স্থায়ীভাবে মুছে যাবে। এটি তখনই সম্ভব যদি এতে কোনো বিক্রয়, মজুদ বা হিসাবের ইতিহাস না থাকে।"
+  },
+  "dashboard": {
+    "todaysSales": "আজকের বিক্রয়",
+    "todaysExpenses": "আজকের খরচ",
+    "outOfStock": "মজুদ শেষ",
+    "lowStock": "মজুদ কম",
+    "recentSales": "সাম্প্রতিক বিক্রয়",
+    "invoice": "চালান",
+    "customer": "ক্রেতা",
+    "noSales": "এখনও কোনো সম্পন্ন বিক্রয় নেই।"
+  },
   "products": {
     "count_one": "{{count}}টি পণ্য",
     "count_other": "{{count}}টি পণ্য",
@@ -90,7 +118,18 @@
     "methodCard": "কার্ড",
     "methodMobileBanking": "মোবাইল ব্যাংকিং",
     "methodStoreCredit": "স্টোর ক্রেডিট",
-    "methodBank": "ব্যাংক ট্রান্সফার"
+    "methodBank": "ব্যাংক ট্রান্সফার",
+    "browseProducts": "পণ্য দেখুন",
+    "searchNameOrSku": "নাম বা এসকেইউ খুঁজুন",
+    "all": "সব",
+    "noProductsMatch": "কোনো পণ্য মেলেনি।",
+    "loadingProducts": "পণ্য লোড হচ্ছে…",
+    "loading": "লোড হচ্ছে…",
+    "loadMore": "আরও দেখুন",
+    "couldntLoadProducts": "পণ্য লোড করা যায়নি।",
+    "couldntLoadMoreProducts": "আরও পণ্য লোড করা যায়নি।",
+    "couldntAddProduct": "{{name}} কার্টে যোগ করা যায়নি।",
+    "cart": "কার্ট"
   },
   "purchases": {
     "count_one": "{{count}}টি ক্রয় আদেশ",

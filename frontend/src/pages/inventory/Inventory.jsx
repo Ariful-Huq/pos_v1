@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { History, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Badge from "../components/ui/Badge";
-import DataTable from "../components/ui/DataTable";
-import ActionMenu from "../components/ui/ActionMenu";
+import Badge from "../../components/ui/Badge";
+import DataTable from "../../components/ui/DataTable";
+import ActionMenu from "../../components/ui/ActionMenu";
 import AdjustStockModal from "./AdjustStockModal";
 import StockHistoryModal from "./StockHistoryModal";
-import { listStockLevels } from "../api/inventory";
+import { listStockLevels } from "../../api/inventory";
 
 const LOW_STOCK_THRESHOLD = 10;
 

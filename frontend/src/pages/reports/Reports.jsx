@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, PackageX } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import StatCard from "../components/ui/StatCard";
-import MiniBarChart from "../components/ui/MiniBarChart";
-import DataTable from "../components/ui/DataTable";
-import Tabs from "../components/ui/Tabs";
-import { getSummary, getTopProducts } from "../api/reports";
+import StatCard from "../../components/ui/StatCard";
+import MiniBarChart from "../../components/ui/MiniBarChart";
+import DataTable from "../../components/ui/DataTable";
+import Tabs from "../../components/ui/Tabs";
+import { getSummary, getTopProducts } from "../../api/reports";
 
 const PERIOD_VALUES = [7, 30, 90];
 

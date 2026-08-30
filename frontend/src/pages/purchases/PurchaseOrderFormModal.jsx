@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Button from "../components/ui/Button";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
 
 const EMPTY_LINE = { product: "", quantity_ordered: "1", unit_cost: "0" };
 

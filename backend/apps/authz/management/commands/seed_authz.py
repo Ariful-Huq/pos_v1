@@ -19,6 +19,7 @@ FEATURES = [
     ("staff.manage", "staff", "Manage staff"),
     ("catalog.view", "catalog", "View products/catalog"),
     ("catalog.manage", "catalog", "Create/edit products"),
+    ("settings.manage", "settings", "Manage business profile and branches"),
 ]
 
 ROLES = {

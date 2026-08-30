@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Button from "../components/ui/Button";
-import DataTable from "../components/ui/DataTable";
+import Button from "../../components/ui/Button";
+import DataTable from "../../components/ui/DataTable";
 import ExpenseFormModal from "./ExpenseFormModal";
-import { listExpenses, createExpense, listExpenseCategories } from "../api/expenses";
+import { listExpenses, createExpense, listExpenseCategories } from "../../api/expenses";
 
 export default function Expenses() {
   const { t } = useTranslation();

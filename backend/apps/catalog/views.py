@@ -27,6 +27,25 @@ class ProductViewSet(viewsets.ModelViewSet):
             return "catalog.view"
         return "catalog.manage"
 
+    def get_queryset(self):
+        """
+        Supports the POS catalog picker's ?search= and ?category= query
+        params. search matches name or SKU (case-insensitive, partial);
+        category filters to an exact Category id.
+        """
+        qs = super().get_queryset()
+
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(Q(name__icontains=search)
+                           | Q(sku__icontains=search))
+
+        category = self.request.query_params.get("category")
+        if category:
+            qs = qs.filter(category_id=category)
+
+        return qs
+
     @action(detail=False, methods=["get"], url_path="lookup")
     def lookup(self, request):
         """

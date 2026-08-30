@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Badge from "../components/ui/Badge";
-import { listMovements } from "../api/inventory";
+import Modal from "../../components/ui/Modal";
+import Badge from "../../components/ui/Badge";
+import { listMovements } from "../../api/inventory";
 
 const TYPE_TONE = {
   purchase: "success",

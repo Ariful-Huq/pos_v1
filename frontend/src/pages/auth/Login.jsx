@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Languages } from "lucide-react";
-import { login } from "../api/auth";
-import { useAuth } from "../context/AuthContext";
-import { setLanguage } from "../i18n";
+import { login } from "../../api/auth";
+import { useAuth } from "../../context/AuthContext";
+import { setLanguage } from "../../i18n";
 
 export default function Login() {
   const [username, setUsername] = useState("");

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Button from "../components/ui/Button";
-import { createExpenseCategory } from "../api/expenses";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import { createExpenseCategory } from "../../api/expenses";
 
 const EMPTY = { category: "", amount: "", expense_date: "", payment_method: "cash", description: "" };
 

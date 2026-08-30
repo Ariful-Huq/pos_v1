@@ -5,6 +5,11 @@ export async function createDraftSale(customerId = null) {
   return data;
 }
 
+export async function listRecentSales(limit = 5) {
+  const { data } = await client.get("/sales/sales/", { params: { status: "completed", page_size: limit } });
+  return data.results;
+}
+
 export async function listHeldSales() {
   const { data } = await client.get("/sales/sales/", { params: { status: "draft" } });
   return data.results;

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
-import DataTable from "../components/ui/DataTable";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import DataTable from "../../components/ui/DataTable";
 import StaffFormModal from "./StaffFormModal";
-import { listStaff, createStaff } from "../api/staff";
+import { listStaff, createStaff } from "../../api/staff";
 
 export default function Staff() {
   const { t } = useTranslation();

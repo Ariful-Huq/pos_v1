@@ -2,16 +2,17 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./context/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import POS from "./pages/POS";
-import Purchases from "./pages/Purchases";
-import Inventory from "./pages/Inventory";
-import Expenses from "./pages/Expenses";
-import Staff from "./pages/Staff";
-import Accounting from "./pages/Accounting";
-import Reports from "./pages/Reports";
+import Login from "./pages/auth/Login";
+import Dashboard from "./pages/dashboard/Dashboard";
+import Products from "./pages/products/Products";
+import POS from "./pages/pos/POS";
+import Purchases from "./pages/purchases/Purchases";
+import Inventory from "./pages/inventory/Inventory";
+import Expenses from "./pages/expenses/Expenses";
+import Staff from "./pages/staff/Staff";
+import Accounting from "./pages/accounting/Accounting";
+import Reports from "./pages/reports/Reports";
+import Settings from "./pages/settings/Settings";
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="staff" element={<Staff />} />
             <Route path="accounting" element={<Accounting />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </AuthProvider>

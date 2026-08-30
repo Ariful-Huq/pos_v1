@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, PackageCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
-import DataTable from "../components/ui/DataTable";
-import ActionMenu from "../components/ui/ActionMenu";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import DataTable from "../../components/ui/DataTable";
+import ActionMenu from "../../components/ui/ActionMenu";
 import PurchaseOrderFormModal from "./PurchaseOrderFormModal";
 import ReceivePurchaseModal from "./ReceivePurchaseModal";
-import { listPurchaseOrders, createPurchaseOrder, listSuppliers } from "../api/purchases";
-import { listProducts } from "../api/catalog";
+import { listPurchaseOrders, createPurchaseOrder, listSuppliers } from "../../api/purchases";
+import { listProducts } from "../../api/catalog";
 
 const STATUS_TONE = {
   draft: "neutral",

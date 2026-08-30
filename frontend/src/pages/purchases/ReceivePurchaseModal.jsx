@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Button from "../components/ui/Button";
-import Badge from "../components/ui/Badge";
-import { receiveItem } from "../api/purchases";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import { receiveItem } from "../../api/purchases";
 
 export default function ReceivePurchaseModal({ open, onClose, purchaseOrder, onReceived }) {
   const { t } = useTranslation();

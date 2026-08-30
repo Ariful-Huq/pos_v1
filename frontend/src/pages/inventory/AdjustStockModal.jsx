@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/ui/Modal";
-import Button from "../components/ui/Button";
-import { adjustStock } from "../api/inventory";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import { adjustStock } from "../../api/inventory";
 
 export default function AdjustStockModal({ open, onClose, stockLevel, onAdjusted }) {
   const { t } = useTranslation();

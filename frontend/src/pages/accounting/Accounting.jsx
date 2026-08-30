@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import Tabs from "../components/ui/Tabs";
-import DataTable from "../components/ui/DataTable";
-import Badge from "../components/ui/Badge";
-import { listAccounts, listJournalEntries } from "../api/accounting";
+import Tabs from "../../components/ui/Tabs";
+import DataTable from "../../components/ui/DataTable";
+import Badge from "../../components/ui/Badge";
+import { listAccounts, listJournalEntries } from "../../api/accounting";
 
 const TYPE_TONE = {
   asset: "brand", liability: "warning", equity: "neutral", income: "success", expense: "danger",
