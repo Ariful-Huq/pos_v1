@@ -1,3 +1,5 @@
+// frontend/src/pages/auth/Login.jsx
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";

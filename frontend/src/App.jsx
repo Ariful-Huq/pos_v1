@@ -5,6 +5,7 @@ import AppShell from "./components/layout/AppShell";
 import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Products from "./pages/products/Products";
+import SalesHistory from "./pages/sales/SalesHistory";
 import POS from "./pages/pos/POS";
 import Purchases from "./pages/purchases/Purchases";
 import Inventory from "./pages/inventory/Inventory";
@@ -20,6 +21,18 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* Full-screen POS terminal — deliberately OUTSIDE AppShell, no
+              sidebar/topbar chrome, matching a dedicated register. */}
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute>
+                <POS />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/"
             element={
@@ -30,7 +43,7 @@ export default function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="products" element={<Products />} />
-            <Route path="sales" element={<POS />} />
+            <Route path="sales" element={<SalesHistory />} />
             <Route path="purchases" element={<Purchases />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="expenses" element={<Expenses />} />

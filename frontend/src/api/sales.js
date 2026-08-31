@@ -10,6 +10,11 @@ export async function listRecentSales(limit = 5) {
   return data.results;
 }
 
+export async function listAllSales(limit = 100) {
+  const { data } = await client.get("/sales/sales/", { params: { page_size: limit } });
+  return data.results;
+}
+
 export async function listHeldSales() {
   const { data } = await client.get("/sales/sales/", { params: { status: "draft" } });
   return data.results;

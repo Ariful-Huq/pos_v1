@@ -28,7 +28,12 @@
     "page": "Page",
     "of": "of",
     "selectEllipsis": "Select…",
-    "none": "— None —"
+    "none": "— None —",
+    "fullscreen": "Full screen",
+    "lock": "Lock",
+    "sessionLocked": "Session locked",
+    "unlock": "Unlock",
+    "incorrectPassword": "Incorrect password."
   },
   "login": {
     "tagline": "Point of Sale",
@@ -101,7 +106,34 @@
     "couldntLoadProducts": "Couldn't load products.",
     "couldntLoadMoreProducts": "Couldn't load more products.",
     "couldntAddProduct": "Couldn't add {{name}} to the cart.",
-    "cart": "Cart"
+    "cart": "Cart",
+    "openRegister": "Open POS",
+    "payNow": "Pay Now",
+    "backToCart": "Back to Cart",
+    "backToPaymentMethods": "Back to payment methods",
+    "selectPaymentMethod": "Select Payment Method",
+    "choosePaymentMethod": "Please choose how the customer would like to pay.",
+    "amountDue": "Amount Due",
+    "amountTendered": "Amount Tendered",
+    "quickCash": "Quick Cash",
+    "exactAmount": "Exact Amount ({{amount}})",
+    "confirmPayment": "Confirm Payment",
+    "changeDue": "Change Due",
+    "transactionCompleted": "Transaction completed for order {{number}}",
+    "promoCodePlaceholder": "Promo code",
+    "apply": "Apply",
+    "promoComingSoon": "Promo codes are coming soon.",
+    "title": "POS",
+    "home": "Home",
+    "reset": "Reset",
+    "recentDrafts": "Recent Drafts",
+    "noOtherDrafts": "No other held sales.",
+    "onlineSynced": "Online · synced",
+    "totalPayable": "Total Payable",
+    "customerButton": "Walk-in Customer",
+    "customerComingSoon": "Customer selection is coming soon.",
+    "returns": "Returns",
+    "returnsComingSoon": "Returns will be wired up soon."
   },
   "purchases": {
     "count_one": "{{count}} purchase order",
@@ -202,6 +234,15 @@
     "revenue": "Revenue",
     "noSalesPeriod": "No sales in this period.",
     "daysLabel": "{{count}} days"
+  },
+  "salesHistory": {
+    "voidSale": "Void sale",
+    "voidTitle": "Void this sale?",
+    "voidMessage": "This will reverse the stock deduction for {{number}}. This cannot be undone.",
+    "reasonPlaceholder": "Reason (optional)",
+    "invoice": "Invoice",
+    "branch": "Branch",
+    "date": "Date"
   },
   "dashboard": {
     "todaysSales": "Today's Sales",

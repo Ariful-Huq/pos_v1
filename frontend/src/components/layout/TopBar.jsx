@@ -1,4 +1,5 @@
-import { Menu, LogOut, User as UserIcon, Languages } from "lucide-react";
+import { Menu, LogOut, User as UserIcon, Languages, Monitor } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import ActionMenu from "../ui/ActionMenu";
@@ -7,6 +8,7 @@ import { setLanguage } from "../../i18n";
 export default function TopBar({ onOpenMobileMenu, title }) {
   const { user, logout, activeBranchId, switchBranch } = useAuth();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
 
   function toggleLanguage() {
     setLanguage(i18n.language === "bn" ? "en" : "bn");
@@ -26,6 +28,14 @@ export default function TopBar({ onOpenMobileMenu, title }) {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate("/pos")}
+          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"
+          title={t("pos.openRegister")}
+        >
+          <Monitor size={16} />
+        </button>
+
         <button
           onClick={toggleLanguage}
           className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"

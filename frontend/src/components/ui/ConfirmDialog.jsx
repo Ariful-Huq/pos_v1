@@ -30,7 +30,7 @@ export default function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-ink-700">{message}</p>
+      <div className="text-sm text-ink-700">{message}</div>
     </Modal>
   );
 }

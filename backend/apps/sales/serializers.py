@@ -34,13 +34,14 @@ class SaleSerializer(serializers.ModelSerializer):
     payments = PaymentSerializer(many=True, read_only=True)
     customer_name = serializers.CharField(
         source="customer.name", read_only=True, default=None)
+    branch_code = serializers.CharField(source="branch.code", read_only=True)
 
     class Meta:
         model = Sale
         fields = [
-            "id", "branch", "terminal", "customer", "customer_name",
+            "id", "branch", "branch_code", "terminal", "customer", "customer_name",
             "sale_number", "status", "subtotal", "discount_amount",
-            "tax_amount", "total_amount", "notes", "sold_at",
+            "tax_amount", "total_amount", "notes", "sold_at", "created_at",
             "voided_at", "void_reason", "items", "payments",
         ]
         read_only_fields = [

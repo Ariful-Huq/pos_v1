@@ -28,7 +28,12 @@
     "page": "পৃষ্ঠা",
     "of": "এর মধ্যে",
     "selectEllipsis": "নির্বাচন করুন…",
-    "none": "— কোনোটি নয় —"
+    "none": "— কোনোটি নয় —",
+    "fullscreen": "পূর্ণ পর্দা",
+    "lock": "লক করুন",
+    "sessionLocked": "সেশন লক করা আছে",
+    "unlock": "আনলক করুন",
+    "incorrectPassword": "পাসওয়ার্ড সঠিক নয়।"
   },
   "login": {
     "tagline": "পয়েন্ট অফ সেল",
@@ -59,6 +64,15 @@
     "noBranches": "এখনও কোনো শাখা যোগ করা হয়নি।",
     "deleteBranchTitle": "এই শাখাটি মুছে ফেলবেন?",
     "deleteBranchMessage": "\"{{name}}\" স্থায়ীভাবে মুছে যাবে। এটি তখনই সম্ভব যদি এতে কোনো বিক্রয়, মজুদ বা হিসাবের ইতিহাস না থাকে।"
+  },
+  "salesHistory": {
+    "voidSale": "বিক্রয় বাতিল করুন",
+    "voidTitle": "এই বিক্রয়টি বাতিল করবেন?",
+    "voidMessage": "এটি {{number}} এর মজুদ হ্রাস বাতিল করবে। এটি পূর্বাবস্থায় ফেরানো যাবে না।",
+    "reasonPlaceholder": "কারণ (ঐচ্ছিক)",
+    "invoice": "চালান",
+    "branch": "শাখা",
+    "date": "তারিখ"
   },
   "dashboard": {
     "todaysSales": "আজকের বিক্রয়",
@@ -129,7 +143,34 @@
     "couldntLoadProducts": "পণ্য লোড করা যায়নি।",
     "couldntLoadMoreProducts": "আরও পণ্য লোড করা যায়নি।",
     "couldntAddProduct": "{{name}} কার্টে যোগ করা যায়নি।",
-    "cart": "কার্ট"
+    "cart": "কার্ট",
+    "openRegister": "পিওএস খুলুন",
+    "payNow": "এখনই পরিশোধ করুন",
+    "backToCart": "কার্টে ফিরুন",
+    "backToPaymentMethods": "পেমেন্ট পদ্ধতিতে ফিরুন",
+    "selectPaymentMethod": "পেমেন্ট পদ্ধতি নির্বাচন করুন",
+    "choosePaymentMethod": "ক্রেতা কীভাবে পরিশোধ করবেন তা বেছে নিন।",
+    "amountDue": "প্রদেয় পরিমাণ",
+    "amountTendered": "প্রদত্ত পরিমাণ",
+    "quickCash": "দ্রুত নগদ",
+    "exactAmount": "সঠিক পরিমাণ ({{amount}})",
+    "confirmPayment": "পেমেন্ট নিশ্চিত করুন",
+    "changeDue": "ফেরতযোগ্য অর্থ",
+    "transactionCompleted": "অর্ডার {{number}} এর লেনদেন সম্পন্ন হয়েছে",
+    "promoCodePlaceholder": "প্রোমো কোড",
+    "apply": "প্রয়োগ করুন",
+    "promoComingSoon": "প্রোমো কোড শীঘ্রই আসছে।",
+    "title": "পিওএস",
+    "home": "হোম",
+    "reset": "রিসেট",
+    "recentDrafts": "সাম্প্রতিক খসড়া",
+    "noOtherDrafts": "অন্য কোনো হোল্ড করা বিক্রয় নেই।",
+    "onlineSynced": "অনলাইন · সিঙ্ক হয়েছে",
+    "totalPayable": "মোট প্রদেয়",
+    "customerButton": "সাধারণ ক্রেতা",
+    "customerComingSoon": "ক্রেতা নির্বাচন শীঘ্রই আসছে।",
+    "returns": "রিটার্ন",
+    "returnsComingSoon": "রিটার্ন শীঘ্রই যুক্ত করা হবে।"
   },
   "purchases": {
     "count_one": "{{count}}টি ক্রয় আদেশ",

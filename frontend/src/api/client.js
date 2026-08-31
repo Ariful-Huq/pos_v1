@@ -1,3 +1,5 @@
+// frontend/src/api/client.js
+
 import axios from "axios";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -12,10 +14,12 @@ client.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   const activeBranch = localStorage.getItem("active_branch_id");
   if (activeBranch) {
     config.headers["X-Active-Branch"] = activeBranch;
   }
+
   return config;
 });
 
@@ -38,7 +42,21 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Auth endpoints (login, refresh) must never go through the
+    // refresh-and-retry flow below. Without this guard, a genuine bad
+    // password on /auth/token/ gets caught here, the refresh attempt
+    // (with no refresh_token yet) also fails, and the catch block below
+    // does a full page redirect to /login — which tears down the network
+    // request before the real 401 and its body are visible, and before
+    // Login.jsx's own catch block reliably gets to run. That's what was
+    // making failed logins impossible to diagnose.
+    const isAuthEndpoint = originalRequest?.url?.includes("/auth/token");
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({ resolve, reject });
