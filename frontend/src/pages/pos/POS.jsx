@@ -4,7 +4,7 @@ import {
   Scan, Plus, Trash2, CheckCircle2, PauseCircle, Clock, Search, PackageSearch,
   Loader2, Minus, ArrowLeft, Printer, Banknote, CreditCard, Smartphone, Wallet2, X,
   Languages, Settings as SettingsIcon, Maximize, Minimize, Home, RotateCcw, FileClock,
-  User as UserIcon, Lock as LockIcon, LogOut, Wifi,
+  User as UserIcon, Lock as LockIcon, LogOut, Wifi, UserPlus, Undo2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Button from "../../components/ui/Button";
@@ -31,6 +31,47 @@ const PAYMENT_METHODS = [
   { value: "store_credit", icon: Wallet2, labelKey: "pos.methodStoreCredit" },
 ];
 
+// Units that count whole items — never fractional, always step by exactly 1.
+// pcs is obviously whole-count; kg and l are here too because this catalog
+// sells them as whole packaged units (a "1kg bag", "5kg bag" — the quantity
+// is how many bags, not a fractional weight). gm and ml are the loose,
+// precisely-weighed units: 2 decimal places, and +/- steps by the place
+// value of whichever digit the cursor is sitting on, so 500 (gm) with the
+// caret after the "5" steps 500 → 400 → 300, while the caret after the last
+// "0" steps 500 → 499 → 498.
+const WHOLE_COUNT_UNITS = new Set([
+  "pcs", "pc", "piece", "pieces", "unit", "units",
+  "kg", "kgs", "kilogram", "kilograms",
+  "l", "ltr", "litre", "litres", "liter", "liters",
+]);
+
+function getQuantityFormat(unitCode) {
+  const normalized = (unitCode || "").trim().toLowerCase();
+  const isWholeCount = !normalized || WHOLE_COUNT_UNITS.has(normalized);
+  return {
+    decimals: isWholeCount ? 0 : 2,
+    cursorStep: !isWholeCount,
+  };
+}
+
+// Given a numeric string (e.g. "500" or "12.34") and a caret position, works
+// out the place value of the digit immediately to the left of the caret —
+// that's the amount +/- should add or subtract. Falls back to 1 for empty
+// or non-numeric input.
+function getCursorStepValue(valueStr, cursorPos) {
+  if (!valueStr) return 1;
+  const dotIndex = valueStr.indexOf(".");
+  const effectiveDot = dotIndex === -1 ? valueStr.length : dotIndex;
+
+  let digitIndex = Math.max(0, (cursorPos ?? valueStr.length) - 1);
+  if (valueStr[digitIndex] === ".") digitIndex = Math.max(0, digitIndex - 1);
+  if (!/\d/.test(valueStr[digitIndex] || "")) return 1;
+
+  return digitIndex < effectiveDot
+    ? Math.pow(10, effectiveDot - digitIndex - 1) // integer-part digit
+    : Math.pow(10, -(digitIndex - effectiveDot));  // fractional digit
+}
+
 export default function POS() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -44,6 +85,12 @@ export default function POS() {
   const [locked, setLocked] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [recentDraftsNote, setRecentDraftsNote] = useState("");
+  const [headerNote, setHeaderNote] = useState("");
+
+  function showHeaderNote(message) {
+    setHeaderNote(message);
+    setTimeout(() => setHeaderNote(""), 2500);
+  }
 
   const [scanValue, setScanValue] = useState("");
   const [scanError, setScanError] = useState("");
@@ -232,7 +279,7 @@ export default function POS() {
   }
 
   async function handleQuantityChange(itemId, quantity) {
-    if (quantity < 1) return;
+    if (quantity <= 0) return;
     setSale(await updateItemQuantity(sale.id, itemId, quantity));
   }
 
@@ -307,45 +354,58 @@ export default function POS() {
 
   function Header() {
     return (
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200 bg-white shrink-0 gap-3">
-        <span className="font-display font-semibold text-ink-900 shrink-0">{t("pos.title")}</span>
+      <div className="border-b border-surface-200 bg-white shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 gap-3">
+          <span className="font-display font-semibold text-ink-900 shrink-0">{t("pos.title")}</span>
 
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {user?.branch_access?.length > 1 && (
-            <select
-              value={activeBranchId || ""}
-              onChange={(e) => switchBranch(e.target.value)}
-              className="text-sm border border-surface-200 rounded-lg px-2 py-1.5 bg-white font-mono"
-            >
-              {user.branch_access.map((b) => (
-                <option key={b.branch_id || "global"} value={b.branch_id || ""}>{b.branch_name}</option>
-              ))}
-            </select>
-          )}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {user?.branch_access?.length > 1 && (
+              <select
+                value={activeBranchId || ""}
+                onChange={(e) => switchBranch(e.target.value)}
+                className="text-sm border border-surface-200 rounded-lg px-2 py-1.5 bg-white font-mono"
+              >
+                {user.branch_access.map((b) => (
+                  <option key={b.branch_id || "global"} value={b.branch_id || ""}>{b.branch_name}</option>
+                ))}
+              </select>
+            )}
 
-          <IconButton onClick={toggleLanguage} title={t("common.language")}>
-            <Languages size={16} /> <span className="text-xs">{i18n.language === "bn" ? "বাং" : "EN"}</span>
-          </IconButton>
-          <IconButton onClick={() => navigate("/settings")} title={t("nav.settings")}>
-            <SettingsIcon size={16} />
-          </IconButton>
-          <IconButton onClick={toggleFullscreen} title={t("common.fullscreen")}>
-            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-          </IconButton>
+            <IconButton onClick={() => showHeaderNote(t("pos.customerComingSoon"))} title={t("pos.customerButton")}>
+              <UserPlus size={16} /> <span className="text-xs">{t("pos.walkIn")}</span>
+            </IconButton>
 
-          <ActionMenu
-            items={[
-              { label: user?.username, icon: <UserIcon size={14} />, disabled: true },
-              { divider: true },
-              { label: t("common.lock"), icon: <LockIcon size={14} />, onClick: () => setLocked(true) },
-              { label: t("common.signOut"), icon: <LogOut size={14} />, danger: true, onClick: logout },
-            ]}
-          />
+            <IconButton onClick={() => showHeaderNote(t("pos.returnsComingSoon"))} title={t("pos.returns")}>
+              <Undo2 size={16} />
+            </IconButton>
 
-          <button onClick={() => navigate("/sales")} className="p-1.5 rounded-lg text-ink-400 hover:bg-surface-100" title={t("pos.backToCart")}>
-            <X size={20} />
-          </button>
+            <IconButton onClick={toggleLanguage} title={t("common.language")}>
+              <Languages size={16} /> <span className="text-xs">{i18n.language === "bn" ? "বাং" : "EN"}</span>
+            </IconButton>
+            <IconButton onClick={() => navigate("/settings")} title={t("nav.settings")}>
+              <SettingsIcon size={16} />
+            </IconButton>
+            <IconButton onClick={toggleFullscreen} title={t("common.fullscreen")}>
+              {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            </IconButton>
+
+            <ActionMenu
+              items={[
+                { label: user?.username, icon: <UserIcon size={14} />, disabled: true },
+                { divider: true },
+                { label: t("common.lock"), icon: <LockIcon size={14} />, onClick: () => setLocked(true) },
+                { label: t("common.signOut"), icon: <LogOut size={14} />, danger: true, onClick: logout },
+              ]}
+            />
+
+            <button onClick={() => navigate("/sales")} className="p-1.5 rounded-lg text-ink-400 hover:bg-surface-100" title={t("pos.backToCart")}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
+        {headerNote && (
+          <div className="px-4 pb-2 text-xs text-ink-400 text-right">{headerNote}</div>
+        )}
       </div>
     );
   }
@@ -389,7 +449,7 @@ export default function POS() {
                     <p className="text-xs text-ink-400">{h.customer_name || t("pos.walkIn")}</p>
                   </div>
                 </div>
-                <span className="font-figures font-medium text-ink-900">৳ {Number(h.total_amount).toFixed(2)}</span>
+                <span className="font-figures font-medium text-ink-900">৳{Number(h.total_amount).toFixed(2)}</span>
               </button>
             ))}
           </div>
@@ -412,7 +472,7 @@ export default function POS() {
           {remaining < 0 && (
             <div className="bg-surface-50 rounded-xl p-4 mb-4">
               <p className="text-xs uppercase tracking-wide text-ink-400">{t("pos.changeDue")}</p>
-              <p className="font-figures text-3xl font-semibold text-ink-900">৳ {Math.abs(remaining).toFixed(2)}</p>
+              <p className="font-figures text-3xl font-semibold text-ink-900">৳{Math.abs(remaining).toFixed(2)}</p>
             </div>
           )}
 
@@ -474,13 +534,13 @@ export default function POS() {
           </button>
 
           <p className="text-center text-xs uppercase tracking-wide text-ink-400">{t("pos.amountDue")}</p>
-          <p className="text-center font-figures text-5xl font-bold text-ink-900 mb-8">৳ {total.toFixed(2)}</p>
+          <p className="text-center font-figures text-5xl font-bold text-ink-900 mb-8">৳{total.toFixed(2)}</p>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-3">
               <label className="block text-sm font-medium text-ink-700">{t("pos.amountTendered")}</label>
               <div className="bg-white border border-surface-200 rounded-xl px-4 py-3 flex items-center">
-                <span className="font-figures text-2xl text-ink-400 mr-1">৳ </span>
+                <span className="font-figures text-2xl text-ink-400 mr-1">৳</span>
                 <span className="font-figures text-2xl font-semibold text-ink-900">{tendered}</span>
               </div>
 
@@ -492,7 +552,7 @@ export default function POS() {
                     onClick={() => handleQuickCash(amt)}
                     className="py-2 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 font-figures text-sm font-medium"
                   >
-                    ৳ {amt}
+                    ৳{amt}
                   </button>
                 ))}
               </div>
@@ -500,7 +560,7 @@ export default function POS() {
                 onClick={() => setTendered(sale.total_amount)}
                 className="w-full py-2 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 text-sm font-medium"
               >
-                {t("pos.exactAmount", { amount: `৳ ${total.toFixed(2)}` })}
+                {t("pos.exactAmount", { amount: `৳${total.toFixed(2)}` })}
               </button>
             </div>
 
@@ -509,7 +569,7 @@ export default function POS() {
 
           <div className={`mt-6 rounded-xl p-4 flex justify-between items-center ${remaining > 0 ? "bg-accent-100" : "bg-brand-100"}`}>
             <span className="text-sm font-medium text-ink-700">{remaining > 0 ? t("pos.balanceDue") : t("pos.change")}</span>
-            <span className="font-figures text-xl font-semibold text-ink-900">৳ {Math.abs(remaining).toFixed(2)}</span>
+            <span className="font-figures text-xl font-semibold text-ink-900">৳{Math.abs(remaining).toFixed(2)}</span>
           </div>
 
           {completeError && <p className="text-danger-600 text-sm text-center mt-3">{completeError}</p>}
@@ -595,15 +655,16 @@ export default function POS() {
                         <span className="font-figures text-[10px] text-ink-400 mb-1">{product.sku}</span>
 
                         <div className="flex items-center justify-between gap-1">
-                          {/* Unit label — expects product.unit (e.g. "bottle", "pack", "pcs", "kg")
-                              from the catalog API. Renders nothing if the field isn't present yet. */}
-                          {product.unit ? (
-                            <span className="text-[10px] text-ink-400 truncate">per {product.unit}</span>
+                          {/* Unit label — uses unit_code, the actual field
+                              ProductSerializer returns (base_unit.code).
+                              Renders nothing if a product has none. */}
+                          {product.unit_code ? (
+                            <span className="text-[10px] text-ink-400 truncate">per {product.unit_code}</span>
                           ) : <span />}
 
                           <span className="font-figures font-semibold text-[11px] leading-none
                                             text-brand-700 bg-brand-50 border border-brand-200 rounded-md px-1.5 py-1 shrink-0">
-                            ৳ {Number(product.selling_price).toFixed(2)}
+                            ৳{Number(product.selling_price).toFixed(2)}
                           </span>
                         </div>
                       </button>
@@ -649,17 +710,14 @@ export default function POS() {
                           <p className="font-medium text-ink-900 text-sm truncate">{item.product_name}</p>
                           <p className="font-figures text-xs text-ink-400">{item.product_sku}</p>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)} className="w-6 h-6 rounded-md border border-surface-200 flex items-center justify-center hover:bg-surface-50">
-                              <Minus size={12} />
-                            </button>
-                            <span className="font-figures text-sm w-8 text-center">{Number(item.quantity).toFixed(2)}</span>
-                            <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} className="w-6 h-6 rounded-md border border-surface-200 flex items-center justify-center hover:bg-surface-50">
-                              <Plus size={12} />
-                            </button>
+                            <CartQuantityControl
+                              item={item}
+                              onCommit={(qty) => handleQuantityChange(item.id, qty)}
+                            />
                             <span className="font-figures text-xs text-ink-400">
-                              x ৳ {unitPrice.toFixed(2)}
+                              × ৳{unitPrice.toFixed(2)}
                             </span>
-                            <span className="font-figures text-sm font-medium text-ink-900 ml-auto">৳ {Number(item.line_total).toFixed(2)}</span>
+                            <span className="font-figures text-sm font-medium text-ink-900 ml-auto">৳{Number(item.line_total).toFixed(2)}</span>
                           </div>
                         </div>
                         <button onClick={() => handleRemove(item.id)} className="text-danger-500 hover:text-danger-600 shrink-0">
@@ -719,8 +777,8 @@ export default function POS() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-ink-400">{t ("pos.totalPayable")}</p>
-              <p className="font-figures text-xl font-bold text-ink-900">৳ {total.toFixed(2)}</p>
+              <p className="text-xs uppercase tracking-wide text-ink-400">{t("pos.totalPayable")}</p>
+              <p className="font-figures text-xl font-bold text-ink-900">৳{total.toFixed(2)}</p>
             </div>
             <Button
               variant="primary"
@@ -733,6 +791,88 @@ export default function POS() {
         </div>
       </div>
     </Shell>
+  );
+}
+
+// Cart-line quantity control. Behavior depends on the item's unit_code
+// (now returned by SaleItemSerializer, mirroring ProductSerializer):
+//  - whole-count units (pcs, or no unit at all) → integer value, +/- always
+//    steps by 1.
+//  - measured units (gm, ml, ...) → 2 decimal places, and +/- steps
+//    by the place value of the digit under the caret (so 500 with the caret
+//    after the "5" steps by 100; caret at the end steps by 1). The value is
+//    also directly editable — click in, type, Enter/blur to commit.
+function CartQuantityControl({ item, onCommit }) {
+  const { decimals, cursorStep } = getQuantityFormat(item.unit_code);
+  const minQuantity = decimals === 0 ? 1 : Math.pow(10, -decimals);
+  const serverValue = Number(item.quantity).toFixed(decimals);
+
+  const [draft, setDraft] = useState(serverValue);
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(serverValue);
+  }, [serverValue, editing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function clamp(num) {
+    if (Number.isNaN(num)) return Number(serverValue);
+    return Number(Math.max(minQuantity, num).toFixed(decimals));
+  }
+
+  function commit(rawValue) {
+    const next = clamp(parseFloat(rawValue));
+    setEditing(false);
+    setDraft(next.toFixed(decimals));
+    if (next !== Number(item.quantity)) onCommit(next);
+  }
+
+  function step(direction) {
+    const delta = cursorStep
+      ? getCursorStepValue(draft, inputRef.current?.selectionStart ?? draft.length)
+      : 1;
+    const base = parseFloat(editing ? draft : serverValue) || 0;
+    const next = clamp(base + direction * delta);
+    setDraft(next.toFixed(decimals));
+    onCommit(next);
+    // Buttons use onMouseDown+preventDefault to keep focus (and the caret
+    // position) in the input, so repeated clicks keep stepping the same digit.
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => step(-1)}
+        className="w-6 h-6 rounded-md border border-surface-200 flex items-center justify-center hover:bg-surface-50"
+      >
+        <Minus size={12} />
+      </button>
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="decimal"
+        value={editing ? draft : serverValue}
+        onFocus={() => setEditing(true)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") { setDraft(serverValue); setEditing(false); e.currentTarget.blur(); }
+        }}
+        className="font-figures text-sm w-14 text-center rounded-md border border-transparent
+                   hover:border-surface-200 focus:border-brand-500 focus:outline-none py-0.5"
+      />
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => step(1)}
+        className="w-6 h-6 rounded-md border border-surface-200 flex items-center justify-center hover:bg-surface-50"
+      >
+        <Plus size={12} />
+      </button>
+    </div>
   );
 }
 
@@ -752,7 +892,7 @@ function Row({ label, value, negative, bold }) {
   return (
     <div className={`flex justify-between text-sm ${bold ? "font-semibold text-ink-900" : "text-ink-700"}`}>
       <span>{label}</span>
-      <span className="font-figures">{negative && Number(value) > 0 ? "-" : ""}৳ {Number(value).toFixed(2)}</span>
+      <span className="font-figures">{negative && Number(value) > 0 ? "-" : ""}৳{Number(value).toFixed(2)}</span>
     </div>
   );
 }

@@ -7,11 +7,17 @@ from .models import Sale, SaleItem, Payment, Customer
 class SaleItemSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_name = serializers.CharField(source="product.name", read_only=True)
+    # Needed by the POS cart UI to know whether a line item is a whole-count
+    # unit (pcs — steps by 1, no decimals) or a measured unit (gm/ml/kg/l —
+    # 2 decimals, digit-position stepping). Mirrors ProductSerializer's
+    # unit_code field so the frontend can treat both consistently.
+    unit_code = serializers.CharField(
+        source="product.base_unit.code", read_only=True)
 
     class Meta:
         model = SaleItem
         fields = [
-            "id", "product", "product_sku", "product_name",
+            "id", "product", "product_sku", "product_name", "unit_code",
             "quantity", "unit_price", "discount_amount", "tax_amount",
             "line_total", "quantity_returned",
         ]
