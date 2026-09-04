@@ -8,7 +8,7 @@
   "announcement_shipping": "Free delivery on orders over ৳2000!",
   "announcement_thanks": "Big sale is running now!",
 
-  "footer_tagline": "A storefront paired with POS & inventory system.",
+  "footer_tagline": "A storefront paired with your POS & inventory system.",
   "footer_shop_heading": "Shop",
   "footer_all_products": "All Products",
   "footer_deals": "Deals",
@@ -58,7 +58,7 @@
   "choose_options": "Choose options",
 
   "choose_option_heading": "Choose an option",
-  "continue_shopping": "Continue Shopping",
+  "continue_shopping": "Continue shopping",
   "view_cart": "View Cart",
   "added_to_cart_msg": "Added to cart.",
   "choose_option_error": "Please choose an option first.",
@@ -90,6 +90,19 @@
   "remove": "Remove",
   "total": "Total: ৳{value}",
   "proceed_checkout": "Proceed to Checkout",
+
+  "quantity_label": "Quantity",
+  "order_summary_heading": "Order Summary",
+  "subtotal_label": "Subtotal ({count} items)",
+  "estimated_shipping_label": "Estimated Shipping",
+  "estimated_tax_label": "Estimated Tax",
+  "calculated_at_checkout": "Calculated at checkout",
+  "total_label": "Total",
+  "promo_code_label": "Promo code",
+  "promo_code_placeholder": "Enter code",
+  "promo_code_apply": "Apply",
+  "promo_code_note": "Promo codes aren't live yet.",
+  "easy_returns": "Easy Returns",
 
   "checkout_title": "Checkout",
   "checkout_not_live_notice": "Only Cash on Delivery is live right now — other methods will record your order but won't charge you yet.",

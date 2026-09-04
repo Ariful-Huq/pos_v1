@@ -8,7 +8,7 @@
   "announcement_shipping": "৳২০০০ এর বেশি অর্ডারে ফ্রি ডেলিভারি!",
   "announcement_thanks": "চলছে বিগ সেল!",
 
-  "footer_tagline": "POS ও ইনভেন্টরি সিস্টেমের সাথে যুক্ত একটি স্টোরফ্রন্ট।",
+  "footer_tagline": "আপনার POS ও ইনভেন্টরি সিস্টেমের সাথে যুক্ত একটি স্টোরফ্রন্ট।",
   "footer_shop_heading": "শপ",
   "footer_all_products": "সকল পণ্য",
   "footer_deals": "অফার",
@@ -89,6 +89,19 @@
   "remove": "মুছুন",
   "total": "মোট: ৳{value}",
   "proceed_checkout": "চেকআউটে যান",
+
+  "quantity_label": "পরিমাণ",
+  "order_summary_heading": "অর্ডার সামারি",
+  "subtotal_label": "সাবটোটাল ({count}টি পণ্য)",
+  "estimated_shipping_label": "আনুমানিক শিপিং",
+  "estimated_tax_label": "আনুমানিক কর",
+  "calculated_at_checkout": "চেকআউটে হিসাব হবে",
+  "total_label": "মোট",
+  "promo_code_label": "প্রোমো কোড",
+  "promo_code_placeholder": "কোড লিখুন",
+  "promo_code_apply": "প্রয়োগ করুন",
+  "promo_code_note": "প্রোমো কোড এখনো চালু হয়নি।",
+  "easy_returns": "সহজ রিটার্ন",
 
   "checkout_title": "চেকআউট",
   "checkout_not_live_notice": "এই মুহূর্তে শুধু ক্যাশ অন ডেলিভারি সক্রিয় — অন্য পদ্ধতিগুলো অর্ডার রেকর্ড করবে কিন্তু এখনই চার্জ করবে না।",

@@ -41,7 +41,7 @@ export default function TopBar({ onOpenMobileMenu, title }) {
           className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"
           title={t("common.language")}
         >
-          <Languages size={16} />
+
           {i18n.language === "bn" ? "বাং" : "EN"}
         </button>
 
