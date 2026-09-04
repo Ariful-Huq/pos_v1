@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+  Same brand tokens as frontend/src/index.css (deep teal-emerald brand, warm
+  amber primary actions, brick-red destructive, Sora/Inter/IBM Plex Mono,
+  Noto Sans Bengali fallback). If your actual token values differ, share
+  frontend/src/index.css and I'll match these exactly instead of
+  approximating from the SSOT description.
+
+  Dark mode: class-based (not OS-preference-based) so the header toggle
+  button has full control. Tailwind v4 needs this declared explicitly —
+  `dark:` utilities below only activate when a `.dark` class is present on
+  an ancestor (<html>, set by components/ThemeToggle.jsx).
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #ecfdf6;
+  --color-brand-500: #0f766e;
+  --color-brand-600: #0d5f58;
+  --color-brand-700: #0a4842;
+
+  --color-accent-400: #f59e0b;
+  --color-accent-500: #d97706;
+
+  --color-danger-500: #b91c1c;
+  --color-danger-600: #991b1b;
+
+  --font-sans: "Inter", "Noto Sans Bengali", sans-serif;
+  --font-heading: "Sora", "Noto Sans Bengali", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: #1f2937;
+  background: #fafaf9;
+}
+
+.dark body {
+  color: #f3f4f6;
+  background: #0f1115;
+}
+
+.font-price {
+  font-family: var(--font-mono);
+}

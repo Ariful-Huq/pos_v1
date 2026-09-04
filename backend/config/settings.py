@@ -1,3 +1,12 @@
+# backend/config/settings.py
+#
+# UPDATED —
+# Changes from your original, all marked inline with "NEW for e-commerce":
+#   1. 'apps.ecommerce' added to INSTALLED_APPS
+#   2. localhost:3000 (storefront dev server) added to CORS_ALLOWED_ORIGINS default
+#   3. ECOMMERCE_FULFILLMENT_BRANCH_ID / ECOMMERCE_ORGANIZATION_ID env vars
+#      (single-branch, single-org storefront for now, per the ecommerce SSOT §1)
+
 """
 Django settings for config project.
 
@@ -21,6 +30,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -64,6 +75,7 @@ INSTALLED_APPS = [
     'apps.expenses',
     'apps.accounting',
     'apps.reports',
+    'apps.ecommerce',  # NEW for e-commerce
 ]
 
 MIDDLEWARE = [
@@ -162,10 +174,20 @@ MAILERS = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
-                                "http://localhost:5173"])
+                                "http://localhost:5173",
+                                "http://localhost:3000",  # NEW for e-commerce: storefront dev server
+                                ])
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-active-branch",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# --- NEW for e-commerce ----------------------------------------------------
+# Single-branch, single-org storefront for now (see ecommerce SSOT §1) — a
+# per-order branch choice or multi-org storefront is a schema-compatible
+# change later, not something these two settings block.
+ECOMMERCE_FULFILLMENT_BRANCH_ID = env(
+    "ECOMMERCE_FULFILLMENT_BRANCH_ID", default=None)
+ECOMMERCE_ORGANIZATION_ID = env("ECOMMERCE_ORGANIZATION_ID", default=None)

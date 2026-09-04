@@ -37,6 +37,15 @@ mobile/android/.gradle/
 mobile/android/app/build/
 mobile/android/local.properties
 
+# Storefront (Next.js)
+storefront/node_modules/
+storefront/.next/
+storefront/out/
+storefront/dist/
+storefront/.env
+storefront/.env.local
+storefront/*.log
+
 ### --- Docker ---
 docker/**/.env
 docker/**/*.override.yml

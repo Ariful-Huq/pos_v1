@@ -51,19 +51,31 @@ class StockLevelViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["post"], url_path="adjust")
     def adjust(self, request):
         """
-        POST /api/inventory/stock-levels/adjust/  { product, quantity, notes? }
+        POST /api/inventory/stock-levels/adjust/  { product, quantity, branch?, notes? }
 
         quantity is SIGNED — positive to add stock (e.g. found extra
-        units during a count), negative to remove it (e.g. damage,
-        shrinkage). Goes through the same ledger as every other stock
-        change, with a freshly generated idempotency key since a manual
-        adjustment has no natural originating event to key off of.
+        units during a count, or setting opening stock for a new
+        product), negative to remove it (e.g. damage, shrinkage). Goes
+        through the same ledger as every other stock change, with a
+        freshly generated idempotency key since a manual adjustment has
+        no natural originating event to key off of.
+
+        `branch` is optional and lets a caller target a SPECIFIC branch
+        regardless of the active one — needed for setting opening stock
+        at one or more branches during product creation, where the
+        active branch alone wouldn't be enough to stock multiple
+        branches in one flow. Falls back to the active branch, then the
+        first branch, exactly as before if not supplied.
         """
         product = Product.objects.filter(
             id=request.data.get("product")).first()
-        branch = get_active_branch(request) or Branch.objects.first()
+        branch = None
+        if request.data.get("branch"):
+            branch = Branch.objects.filter(id=request.data["branch"]).first()
+        branch = branch or get_active_branch(request) or Branch.objects.first()
+
         if not product or not branch:
-            return Response({"detail": "product and an active branch are required"}, status=400)
+            return Response({"detail": "product and a branch are required"}, status=400)
 
         try:
             services.record_movement(

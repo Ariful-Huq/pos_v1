@@ -2,16 +2,39 @@
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.db.models import Q
 from apps.core.pagination import StandardResultsSetPagination
+from apps.tenants.models import Branch, Organization
 from .models import Product, Category, UnitOfMeasure
 from .serializers import ProductSerializer, CategorySerializer, UnitOfMeasureSerializer
+
+
+def get_active_branch(request):
+    branch_id = request.headers.get("X-Active-Branch")
+    if branch_id:
+        branch = Branch.objects.filter(id=branch_id).first()
+        if branch:
+            return branch
+    return Branch.objects.first()
+
+
+def resolve_organization(request):
+    branch = get_active_branch(request)
+    if branch:
+        return branch.organization
+    return Organization.objects.first()
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     """
     /api/catalog/products/
+
+    parser_classes includes MultiPartParser/FormParser so the frontend can
+    submit product images as multipart/form-data (a plain JSON body can't
+    carry a file) — JSONParser stays too, so a request with no image still
+    works exactly as before.
 
     NOTE: not yet filtered by the user's organization — every product is
     visible regardless of which org owns it. Fine for now with a single
@@ -21,6 +44,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         "category", "base_unit").prefetch_related("barcodes").order_by("name")
     serializer_class = ProductSerializer
     pagination_class = StandardResultsSetPagination
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_required_feature(self, request, view):
         if request.method in ("GET", "HEAD", "OPTIONS"):
@@ -28,11 +52,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         return "catalog.manage"
 
     def get_queryset(self):
-        """
-        Supports the POS catalog picker's ?search= and ?category= query
-        params. search matches name or SKU (case-insensitive, partial);
-        category filters to an exact Category id.
-        """
+        """Supports the POS catalog picker's ?search= and ?category=
+        query params. search matches name or SKU (case-insensitive,
+        partial); category filters to an exact Category id."""
         qs = super().get_queryset()
 
         search = self.request.query_params.get("search")
@@ -76,7 +98,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all().order_by("name")
+    queryset = Category.objects.select_related("parent").all().order_by("name")
     serializer_class = CategorySerializer
     pagination_class = StandardResultsSetPagination
 
@@ -84,6 +106,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return "catalog.view"
         return "catalog.manage"
+
+    def perform_create(self, serializer):
+        if not serializer.validated_data.get("organization"):
+            serializer.save(organization=resolve_organization(self.request))
+        else:
+            serializer.save()
 
 
 class UnitOfMeasureViewSet(viewsets.ModelViewSet):
