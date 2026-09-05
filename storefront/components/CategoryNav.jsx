@@ -17,7 +17,7 @@ export default function CategoryNav() {
   if (categories.length === 0) return null;
 
   return (
-    <nav className="border-b border-gray-200 dark:border-gray-800 px-6 py-2 flex gap-6 text-sm overflow-x-auto">
+    <nav className="border-b border-gray-200 dark:border-gray-800 max-w-6xl mx-auto px-6 py-2 flex gap-6 text-sm overflow-x-auto">
       {categories.map((c) => (
         <Link
           key={c.id}

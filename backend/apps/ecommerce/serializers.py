@@ -5,16 +5,31 @@ from .models import Address, Cart, CartItem, CustomerAccount, Order, OrderItem, 
 
 class CustomerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    # Optional — the register form offers a single "Address" field (not the
+    # full line1/line2/city breakdown checkout uses). When provided, it
+    # becomes the customer's default Address (as line1), ready to prefill
+    # checkout later. Write-only: not a CustomerAccount model field.
+    address = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = CustomerAccount
-        fields = ["id", "email", "full_name", "phone", "password"]
+        fields = ["id", "email", "full_name", "phone", "password", "address"]
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        address_text = validated_data.pop("address", "").strip()
         customer = CustomerAccount(**validated_data)
         customer.set_password(password)
         customer.save()
+        if address_text:
+            Address.objects.create(
+                customer=customer,
+                full_name=customer.full_name,
+                phone=customer.phone,
+                line1=address_text,
+                city="",
+                is_default=True,
+            )
         return customer
 
 
@@ -101,3 +116,13 @@ class CategoryPublicSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     parent = serializers.UUIDField(source="parent_id", allow_null=True)
+
+
+class CustomerAccountSerializer(serializers.ModelSerializer):
+    """Read-only self-profile, returned by GET /auth/me/. Mirrors the
+    staff-side /api/authz/me/ pattern already used elsewhere in this
+    project — same idea, separate identity system (CustomerAccount, not
+    auth.User), so it lives here rather than in apps.authz."""
+    class Meta:
+        model = CustomerAccount
+        fields = ["id", "email", "full_name", "phone"]

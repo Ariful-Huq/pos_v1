@@ -293,7 +293,7 @@ export default function POS() {
   }
 
   function toggleLanguage() {
-    setLanguage(i18n.language === "bn" ? "en" : "bn");
+    setLanguage(i18n.language === "en" ? "bn" : "en");
   }
 
   function toggleFullscreen() {
@@ -375,12 +375,14 @@ export default function POS() {
               <UserPlus size={16} /> <span className="text-xs">{t("pos.walkIn")}</span>
             </IconButton>
 
+            <div className="h-6 w-px bg-surface-200" />
+
             <IconButton onClick={() => showHeaderNote(t("pos.returnsComingSoon"))} title={t("pos.returns")}>
               <Undo2 size={16} />
             </IconButton>
 
             <IconButton onClick={toggleLanguage} title={t("common.language")}>
-              <Languages size={16} /> <span className="text-xs">{i18n.language === "bn" ? "বাং" : "EN"}</span>
+              <span className="text-xs">{i18n.language === "bn" ? "EN" : "BN"}</span>
             </IconButton>
             <IconButton onClick={() => navigate("/settings")} title={t("nav.settings")}>
               <SettingsIcon size={16} />
@@ -388,6 +390,8 @@ export default function POS() {
             <IconButton onClick={toggleFullscreen} title={t("common.fullscreen")}>
               {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
             </IconButton>
+
+            <div className="h-6 w-px bg-surface-200" />
 
             <ActionMenu
               items={[
@@ -760,6 +764,7 @@ export default function POS() {
               <span className="w-2 h-2 rounded-full bg-brand-500 inline-block" />
               <Wifi size={12} /> {t("pos.onlineSynced")}
             </span>
+            <div className="h-8 w-px bg-surface-200" />
             <Button variant="outline" size="sm" onClick={() => navigate("/")}>
               <Home size={14} /> {t("pos.home")}
             </Button>

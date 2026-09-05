@@ -39,7 +39,7 @@ from . import services
 from .models import Address, Cart, CustomerAccount, Order
 from .serializers import (
     AddressSerializer, CartSerializer, CategoryPublicSerializer, CheckoutSerializer,
-    CustomerLoginSerializer, CustomerRegisterSerializer, OrderSerializer,
+    CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer, OrderSerializer,
 )
 
 SIGNING_SALT = "ecommerce.customer-auth"
@@ -61,11 +61,13 @@ class CustomerTokenAuthentication(BaseAuthentication):
             return None
         token = header.removeprefix("Bearer ").strip()
         try:
-            data = signing.loads(token, salt=SIGNING_SALT, max_age=TOKEN_MAX_AGE_SECONDS)
+            data = signing.loads(token, salt=SIGNING_SALT,
+                                 max_age=TOKEN_MAX_AGE_SECONDS)
         except signing.BadSignature:
             raise AuthenticationFailed("Invalid or expired token.")
         try:
-            customer = CustomerAccount.objects.get(id=data["customer_id"], is_active=True)
+            customer = CustomerAccount.objects.get(
+                id=data["customer_id"], is_active=True)
         except CustomerAccount.DoesNotExist:
             raise AuthenticationFailed("Customer not found.")
         return (customer, None)
@@ -73,13 +75,15 @@ class CustomerTokenAuthentication(BaseAuthentication):
 
 def get_current_organization() -> Organization:
     if not settings.ECOMMERCE_ORGANIZATION_ID:
-        raise RuntimeError("ECOMMERCE_ORGANIZATION_ID is not set in settings/.env")
+        raise RuntimeError(
+            "ECOMMERCE_ORGANIZATION_ID is not set in settings/.env")
     return get_object_or_404(Organization, id=settings.ECOMMERCE_ORGANIZATION_ID)
 
 
 def get_fulfillment_branch() -> Branch:
     if not settings.ECOMMERCE_FULFILLMENT_BRANCH_ID:
-        raise RuntimeError("ECOMMERCE_FULFILLMENT_BRANCH_ID is not set in settings/.env")
+        raise RuntimeError(
+            "ECOMMERCE_FULFILLMENT_BRANCH_ID is not set in settings/.env")
     return get_object_or_404(Branch, id=settings.ECOMMERCE_FULFILLMENT_BRANCH_ID)
 
 
@@ -114,6 +118,19 @@ class LoginView(APIView):
         if not customer or not customer.check_password(serializer.validated_data["password"]):
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
         return Response({"token": issue_customer_token(customer)})
+
+
+class MeView(generics.RetrieveAPIView):
+    """GET /auth/me/ — the signed-in customer's own profile. There's no
+    logout endpoint: the token is stateless (django.core.signing, not a
+    DB-backed session), so "logging out" is just deleting it client-side.
+    Nothing server-side needs to know."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CustomerAccountSerializer
+
+    def get_object(self):
+        return self.request.user
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +194,8 @@ class ProductDetailView(generics.RetrieveAPIView):
 # ---------------------------------------------------------------------------
 def _get_or_create_cart(request) -> Cart:
     organization = get_current_organization()
-    customer = request.user if isinstance(getattr(request, "user", None), CustomerAccount) else None
+    customer = request.user if isinstance(
+        getattr(request, "user", None), CustomerAccount) else None
     if customer:
         cart, _ = Cart.objects.get_or_create(
             customer=customer, status="active", organization=organization
@@ -202,9 +220,11 @@ class CartView(APIView):
 
     def post(self, request):
         cart = _get_or_create_cart(request)
-        product = get_object_or_404(Product, id=request.data.get("product"), is_published_online=True)
+        product = get_object_or_404(Product, id=request.data.get(
+            "product"), is_published_online=True)
         variant_id = request.data.get("variant")
-        variant = get_object_or_404(product.variants, id=variant_id) if variant_id else None
+        variant = get_object_or_404(
+            product.variants, id=variant_id) if variant_id else None
         quantity = int(request.data.get("quantity", 1))
         unit_price = variant.effective_price if variant else product.selling_price
         services.add_to_cart(cart, product, variant, quantity, unit_price)
@@ -244,12 +264,15 @@ class CheckoutView(APIView):
         data = serializer.validated_data
 
         cart = _get_or_create_cart(request)
-        customer = request.user if isinstance(getattr(request, "user", None), CustomerAccount) else None
+        customer = request.user if isinstance(
+            getattr(request, "user", None), CustomerAccount) else None
 
         if data.get("shipping_address_id"):
-            address = get_object_or_404(Address, id=data["shipping_address_id"])
+            address = get_object_or_404(
+                Address, id=data["shipping_address_id"])
         else:
-            address = Address.objects.create(customer=customer, **data["shipping_address"])
+            address = Address.objects.create(
+                customer=customer, **data["shipping_address"])
 
         try:
             order = services.checkout(
@@ -283,6 +306,7 @@ class OrderListView(generics.ListAPIView):
 
 class OrderDetailView(generics.RetrieveAPIView):
     authentication_classes = [CustomerTokenAuthentication]
-    permission_classes = [permissions.AllowAny]  # guest can view their own order by id (no listing)
+    # guest can view their own order by id (no listing)
+    permission_classes = [permissions.AllowAny]
     serializer_class = OrderSerializer
     queryset = Order.objects.all()

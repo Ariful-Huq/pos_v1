@@ -22,6 +22,21 @@
   "home_subtitle": "Browse products and check out with Cash on Delivery.",
   "home_cta": "Shop now",
 
+  "hero_eyebrow": "Shop",
+  "hero_heading": "Sell online & in-store",
+  "hero_subtitle": "One catalog, real-time inventory, and a storefront that stays in sync with your POS.",
+  "hero_cta": "Shop Now",
+  "hero_image_placeholder": "Add your hero banner image here",
+
+  "flash_sale_eyebrow": "Flash Sale",
+  "flash_sale_title": "Weekend Flash Sale",
+  "flash_sale_ends_in": "Ends in",
+  "flash_sale_demo_note": "Demo pricing — not a live promotion.",
+
+  "collection_eyebrow": "Collection",
+  "new_arrivals_title": "New Arrivals",
+  "view_all": "View All",
+
   "shop_title": "Shop",
   "products_count": "{count} products",
   "filters_applied": "· filters applied",
@@ -84,7 +99,7 @@
   "related_products_eyebrow": "You may also like",
   "related_products_heading": "Related Products",
   
-  "cart_title": "Your cart",
+  "cart_title": "My cart",
   "cart_empty": "Your cart is empty.",
   "browse_products": "Browse products",
   "remove": "Remove",
@@ -95,7 +110,7 @@
   "order_summary_heading": "Order Summary",
   "subtotal_label": "Subtotal ({count} items)",
   "estimated_shipping_label": "Estimated Shipping",
-  "estimated_tax_label": "Estimated Tax",
+  "estimated_tax_label": "Estimated VAT",
   "calculated_at_checkout": "Calculated at checkout",
   "total_label": "Total",
   "promo_code_label": "Promo code",
@@ -124,5 +139,30 @@
 
   "order_confirmed": "Order confirmed",
   "order_received": "Order received",
-  "order_pending_notice": "Your payment method isn't live yet — we've recorded your order, but it won't be processed until this is confirmed by our team."
+  "order_pending_notice": "Your payment method isn't live yet — we've recorded your order, but it won't be processed until this is confirmed by our team.",
+
+  "close": "Close",
+  "show_password": "Show password",
+  "hide_password": "Hide password",
+  "auth_welcome_back": "Welcome back",
+  "auth_create_account": "Create your account",
+  "auth_join_us": "Join us",
+  "auth_create_account_cta": "Create account",
+  "auth_login_subtitle": "Sign in to continue to checkout and your orders.",
+  "auth_register_subtitle": "Create your store account to track orders and checkout faster",
+  "auth_tab_signin": "Sign in",
+  "auth_tab_register": "Register",
+  "auth_email_label": "Email",
+  "auth_address_label": "Address",
+  "auth_password_label": "Password",
+  "auth_confirm_password_label": "Confirm Password",
+  "auth_password_mismatch": "Passwords don't match.",
+  "auth_remember_me": "Remember me",
+  "auth_submitting": "Please wait…",
+  "account_sign_in": "Sign in",
+  "account_sign_out": "Sign out",
+  "account_my_orders": "My Orders",
+  "account_no_orders": "You haven't placed any orders yet.",
+  "account_order_pending_number": "Order pending confirmation",
+  "account_orders_signin_prompt": "Sign in to see your order history."
 }
