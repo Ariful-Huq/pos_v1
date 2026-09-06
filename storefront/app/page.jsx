@@ -14,10 +14,17 @@ async function getJSON(path) {
 }
 
 export default async function HomePage() {
-  const [categories, products] = await Promise.all([
+  const [categories, products, banners] = await Promise.all([
     getJSON("/categories/"),
     getJSON("/products/?ordering=latest"),
+    getJSON("/home-banners/"),
   ]);
+
+  // Backend already filters to is_active + in-window (see
+  // HomeBannerListView) and orders by sort_order — first result is simply
+  // "whichever banner should be showing right now". null when staff
+  // haven't configured one yet, which HeroSection falls back on.
+  const activeBanner = banners[0] || null;
 
   // Already latest-first from the API — first 4 is a real "New Arrivals".
   const newArrivals = products.slice(0, 4);
@@ -39,7 +46,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <HeroSection />
+      <HeroSection banner={activeBanner} />
 
       <FlashSaleSection products={flashSaleProducts} viewAllHref="/products" />
 

@@ -24,7 +24,9 @@ go through this one function.
 """
 from django.conf import settings
 from django.core import signing
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -36,10 +38,10 @@ from apps.catalog.serializers import ProductPublicSerializer
 from apps.tenants.models import Branch, Organization
 
 from . import services
-from .models import Address, Cart, CustomerAccount, Order
+from .models import Address, Cart, CustomerAccount, HomeBanner, Order
 from .serializers import (
     AddressSerializer, CartSerializer, CategoryPublicSerializer, CheckoutSerializer,
-    CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer, OrderSerializer,
+    CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer, HomeBannerPublicSerializer, OrderSerializer,
 )
 
 SIGNING_SALT = "ecommerce.customer-auth"
@@ -187,6 +189,26 @@ class ProductDetailView(generics.RetrieveAPIView):
     serializer_class = ProductPublicSerializer
     queryset = Product.objects.filter(is_published_online=True, is_active=True)
     lookup_field = "slug"
+
+
+class HomeBannerListView(generics.ListAPIView):
+    """Home-page hero banner(s) — staff manage these in Django admin
+    (title/subtitle/image/CTA/schedule), no code change needed to swap
+    a sale banner in or out. Only returns banners that are is_active=True
+    AND currently inside their optional starts_at/ends_at window."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.AllowAny]
+    serializer_class = HomeBannerPublicSerializer
+
+    def get_queryset(self):
+        now = timezone.now()
+        return HomeBanner.objects.filter(
+            organization=get_current_organization(), is_active=True
+        ).filter(
+            Q(starts_at__isnull=True) | Q(starts_at__lte=now)
+        ).filter(
+            Q(ends_at__isnull=True) | Q(ends_at__gte=now)
+        )
 
 
 # ---------------------------------------------------------------------------

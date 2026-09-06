@@ -1,4 +1,5 @@
 {
+  "site_name": "পণ্যসম্ভার",
   "nav_home": "হোম",
   "nav_shop": "শপ",
   "search_placeholder": "পণ্য খুঁজুন...",
@@ -8,7 +9,7 @@
   "announcement_shipping": "৳২০০০ এর বেশি অর্ডারে ফ্রি ডেলিভারি!",
   "announcement_thanks": "চলছে বিগ সেল!",
 
-  "footer_tagline": "আপনার POS ও ইনভেন্টরি সিস্টেমের সাথে যুক্ত একটি স্টোরফ্রন্ট।",
+  "footer_tagline": "পস ও ইনভেন্টরি সিস্টেমের সাথে যুক্ত একটি ই-কমার্স সাইট।",
   "footer_shop_heading": "শপ",
   "footer_all_products": "সকল পণ্য",
   "footer_deals": "অফার",
@@ -98,7 +99,7 @@
   "reviews_coming_soon": "রিভিউ এখনো চালু হয়নি।",
   "related_products_eyebrow": "আপনার পছন্দ হতে পারে",
   "related_products_heading": "সম্পর্কিত পণ্য",
-  "cart_title": "আমার কার্ট",
+  "cart_title": "আপনার কার্ট",
   "cart_empty": "আপনার কার্ট খালি।",
   "browse_products": "পণ্য দেখুন",
   "remove": "মুছুন",

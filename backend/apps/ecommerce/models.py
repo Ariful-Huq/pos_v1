@@ -208,3 +208,35 @@ class Payment(BaseModel):
 
     def __str__(self):
         return f"{self.method} — {self.status} — {self.amount}"
+
+
+class HomeBanner(BaseModel):
+    """Storefront home-page hero banner, curated by staff via Django admin —
+    no code changes or redeploys needed to run a new sale/promo/festival
+    banner. Multiple rows can exist at once (e.g. queued up in advance);
+    the storefront only ever shows the ones currently active + in-window,
+    ordered by `sort_order`. See HomeBannerListView for the active-window
+    filtering — keep that logic in sync if you change these fields."""
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="home_banners")
+    title = models.CharField(max_length=200)
+    subtitle = models.CharField(max_length=300, blank=True)
+    image = models.ImageField(upload_to="home_banners/")
+    cta_label = models.CharField(max_length=50, blank=True, default="Shop Now")
+    cta_url = models.CharField(max_length=300, blank=True, default="/products")
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to hide immediately without deleting the row.")
+    starts_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Leave blank to show as soon as it's active.")
+    ends_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Leave blank to keep showing indefinitely.")
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "-created_at"]
+
+    def __str__(self):
+        return self.title

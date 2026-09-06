@@ -1,6 +1,15 @@
 from rest_framework import serializers
 
-from .models import Address, Cart, CartItem, CustomerAccount, Order, OrderItem, Payment
+from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment
+
+
+class HomeBannerPublicSerializer(serializers.ModelSerializer):
+    """Public shape for the home page — no organization/is_active/schedule
+    fields; the queryset (HomeBannerListView) already filters to only the
+    banners that should be visible right now."""
+    class Meta:
+        model = HomeBanner
+        fields = ["id", "title", "subtitle", "image", "cta_label", "cta_url"]
 
 
 class CustomerRegisterSerializer(serializers.ModelSerializer):

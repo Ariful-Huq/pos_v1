@@ -17,20 +17,22 @@ export default function CategoryNav() {
   if (categories.length === 0) return null;
 
   return (
-    <nav className="border-b border-gray-200 dark:border-gray-800 max-w-6xl mx-auto px-6 py-2 flex gap-6 text-sm overflow-x-auto">
-      {categories.map((c) => (
-        <Link
-          key={c.id}
-          href={`/products?category=${c.id}`}
-          className={`whitespace-nowrap ${
-            activeCategory === c.id
-              ? "text-brand-700 dark:text-brand-500 font-medium"
-              : "text-gray-600 dark:text-gray-400 hover:text-brand-600"
-          }`}
-        >
-          {c.name}
-        </Link>
-      ))}
+    <nav className="border-b border-gray-200 dark:border-gray-800">
+	  <div className="max-w-6xl mx-auto px-6 py-2 flex gap-6 text-sm overflow-x-auto">
+        {categories.map((c) => (
+          <Link
+            key={c.id}
+            href={`/products?category=${c.id}`}
+            className={`whitespace-nowrap ${
+              activeCategory === c.id
+                ? "text-brand-700 dark:text-brand-500 font-medium"
+                : "text-gray-600 dark:text-gray-400 hover:text-brand-600"
+            }`}
+          >
+            {c.name}
+          </Link>
+        ))}
+	  </div>
     </nav>
   );
 }

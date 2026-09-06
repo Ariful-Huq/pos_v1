@@ -1,4 +1,5 @@
 {
+  "site_name": "PonnoSomver",
   "nav_home": "Home",
   "nav_shop": "Shop",
   "search_placeholder": "Search products...",
@@ -8,7 +9,7 @@
   "announcement_shipping": "Free delivery on orders over ৳2000!",
   "announcement_thanks": "Big sale is running now!",
 
-  "footer_tagline": "A storefront paired with your POS & inventory system.",
+  "footer_tagline": "An e-commerce site paired with POS & inventory system.",
   "footer_shop_heading": "Shop",
   "footer_all_products": "All Products",
   "footer_deals": "Deals",
@@ -99,7 +100,7 @@
   "related_products_eyebrow": "You may also like",
   "related_products_heading": "Related Products",
   
-  "cart_title": "My cart",
+  "cart_title": "Your cart",
   "cart_empty": "Your cart is empty.",
   "browse_products": "Browse products",
   "remove": "Remove",

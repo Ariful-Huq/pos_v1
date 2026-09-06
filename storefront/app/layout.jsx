@@ -15,7 +15,7 @@ import T from "../components/T";
 import ThemeToggle from "../components/ThemeToggle";
 
 export const metadata = {
-  title: "Store",
+  title: "PonnoSomver",
   description: "pos_v1 storefront",
 };
 
@@ -43,22 +43,24 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <AnnouncementBar />
 
-            <header className="border-b border-gray-200 dark:border-gray-800 max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
-              <Link href="/" className="font-heading text-xl font-semibold text-brand-700 dark:text-brand-500 shrink-0">
-                Store
-              </Link>
-              <nav className="flex gap-6 text-sm shrink-0">
-                <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-brand-600"><T id="nav_home" /></Link>
-                <Link href="/products" className="text-gray-700 dark:text-gray-300 hover:text-brand-600"><T id="nav_shop" /></Link>
-              </nav>
+            <header className="border-b border-gray-200 dark:border-gray-800">
+			  <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
+                <Link href="/" className="font-heading text-xl font-semibold text-brand-700 dark:text-brand-500 shrink-0">
+                  <T id="site_name" />
+                </Link>
+                <nav className="flex gap-6 text-sm shrink-0">
+                  <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-brand-600"><T id="nav_home" /></Link>
+                  <Link href="/products" className="text-gray-700 dark:text-gray-300 hover:text-brand-600"><T id="nav_shop" /></Link>
+                </nav>
 
-              <SearchBar />
+                <SearchBar />
 
-              <div className="ml-auto flex items-center gap-3">
-                <LanguageSwitcher />
-                <ThemeToggle />
-                <AccountMenu />
-                <CartBadge />
+                <div className="ml-auto flex items-center gap-3">
+                  <LanguageSwitcher />
+                  <ThemeToggle />
+                  <AccountMenu />
+                  <CartBadge />
+				</div>
               </div>
             </header>
 

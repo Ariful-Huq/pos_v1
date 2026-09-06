@@ -2,13 +2,25 @@
 
 from django.contrib import admin
 
-from .models import Address, Cart, CartItem, CustomerAccount, Order, OrderItem, Payment
+from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment
 
 
 @admin.register(CustomerAccount)
 class CustomerAccountAdmin(admin.ModelAdmin):
     list_display = ("email", "full_name", "phone", "is_active", "created_at")
     search_fields = ("email", "full_name", "phone")
+
+
+@admin.register(HomeBanner)
+class HomeBannerAdmin(admin.ModelAdmin):
+    """The intended day-to-day workflow for swapping in a new sale/promo
+    banner: add a row here with the image + copy, optionally set
+    starts_at/ends_at, save. No deploy needed — the storefront home page
+    picks it up on its next fetch (cached at most 60s, see app/page.jsx)."""
+    list_display = ("title", "organization", "is_active", "starts_at", "ends_at", "sort_order")
+    list_filter = ("organization", "is_active")
+    list_editable = ("is_active", "sort_order")
+    search_fields = ("title", "subtitle")
 
 
 @admin.register(Address)
