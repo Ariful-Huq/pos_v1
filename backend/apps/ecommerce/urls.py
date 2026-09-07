@@ -14,6 +14,7 @@ urlpatterns = [
          views.ProductDetailView.as_view(), name="product-detail"),
     path("categories/", views.CategoryListView.as_view(), name="category-list"),
     path("home-banners/", views.HomeBannerListView.as_view(), name="home-banner-list"),
+    path("shipping-config/", views.ShippingConfigView.as_view(), name="shipping-config"),
 
     path("cart/", views.CartView.as_view(), name="cart"),
     path("cart/items/<uuid:item_id>/",

@@ -648,11 +648,11 @@ export default function POS() {
                                    hover:border-brand-500 disabled:opacity-60 disabled:cursor-not-allowed
                                    flex flex-col text-left relative overflow-hidden"
                       >
-                        <div className="flex-1 rounded-lg bg-surface-50 flex items-center justify-center mb-2">
+                        <div className="flex-1 rounded-lg bg-surface-50 flex items-center justify-center mb-2 overflow-hidden">
                           {adding ? (
                             <Loader2 size={22} className="animate-spin text-brand-700" />
                           ) : (
-                            <PackageSearch size={28} className="text-surface-200" />
+                            <ProductThumbnail product={product} />
                           )}
                         </div>
                         <span className="font-medium text-ink-900 text-xs leading-snug line-clamp-2">{product.name}</span>
@@ -900,4 +900,19 @@ function Row({ label, value, negative, bold }) {
       <span className="font-figures">{negative && Number(value) > 0 ? "-" : ""}৳{Number(value).toFixed(2)}</span>
     </div>
   );
+}
+
+function ProductThumbnail({ product }) {
+  const [imgError, setImgError] = useState(false);
+  if (product.image && !imgError) {
+    return (
+      <img
+        src={product.image}
+        alt={product.name}
+        className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-105"
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  return <PackageSearch size={28} className="text-surface-200" />;
 }

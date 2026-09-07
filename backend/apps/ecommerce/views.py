@@ -183,6 +183,21 @@ class CategoryListView(generics.ListAPIView):
         ).order_by("name")
 
 
+class ShippingConfigView(APIView):
+    """Public. Exposes the same two settings services.calculate_shipping()
+    uses, so the cart/checkout pages can compute a live estimate that's
+    guaranteed to match what checkout() actually charges — no duplicated
+    magic numbers hardcoded on the frontend that could drift out of sync."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            "flat_shipping_cost": settings.ECOMMERCE_FLAT_SHIPPING_COST,
+            "free_shipping_threshold": settings.ECOMMERCE_FREE_SHIPPING_THRESHOLD,
+        })
+
+
 class ProductDetailView(generics.RetrieveAPIView):
     authentication_classes = [CustomerTokenAuthentication]
     permission_classes = [permissions.AllowAny]

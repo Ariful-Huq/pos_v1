@@ -86,6 +86,7 @@ export const api = {
   },
   product: (id) => request(`/products/${id}/`, { auth: false }),
   categories: () => request("/categories/", { auth: false }),
+  shippingConfig: () => request("/shipping-config/", { auth: false }),
 
   cart: () => request("/cart/"),
   addToCart: async (data) => {

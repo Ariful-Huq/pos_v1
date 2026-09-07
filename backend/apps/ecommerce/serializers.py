@@ -55,10 +55,13 @@ class AddressSerializer(serializers.ModelSerializer):
 
 class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
+    # Real — Product.tax_rate already exists, just unused until now. Lets
+    # the cart page show an accurate tax estimate before an Order exists.
+    tax_rate = serializers.DecimalField(source="product.tax_rate", max_digits=5, decimal_places=2, read_only=True)
 
     class Meta:
         model = CartItem
-        fields = ["id", "product", "product_name", "variant", "quantity", "unit_price_snapshot"]
+        fields = ["id", "product", "product_name", "variant", "quantity", "unit_price_snapshot", "tax_rate"]
         read_only_fields = ["unit_price_snapshot"]
 
 
@@ -95,9 +98,15 @@ class CheckoutSerializer(serializers.Serializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    line_total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    line_tax = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "variant", "product_name_snapshot", "unit_price_snapshot", "quantity"]
+        fields = [
+            "id", "product", "variant", "product_name_snapshot", "unit_price_snapshot",
+            "tax_rate_snapshot", "quantity", "line_total", "line_tax",
+        ]
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -109,12 +118,13 @@ class PaymentSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
+    shipping_address = AddressSerializer(read_only=True)
 
     class Meta:
         model = Order
         fields = [
-            "id", "order_number", "status", "subtotal", "total",
-            "guest_email", "guest_phone", "items", "payments", "created_at",
+            "id", "order_number", "status", "subtotal", "shipping_cost", "tax_amount", "total",
+            "guest_email", "guest_phone", "shipping_address", "items", "payments", "created_at",
         ]
 
 

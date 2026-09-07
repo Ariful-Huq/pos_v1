@@ -11,6 +11,7 @@ source, since I haven't seen it yet.
 import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -63,6 +64,29 @@ def _generate_order_number() -> str:
     return f"WEB-{timezone.now():%Y%m%d}-{uuid.uuid4().hex[:8].upper()}"
 
 
+def calculate_shipping(subtotal: Decimal) -> Decimal:
+    """Flat rate, free above a threshold — both settings-driven (same
+    pattern as ECOMMERCE_FULFILLMENT_BRANCH_ID), not hardcoded. Deliberately
+    the simplest real rule that exists rather than a fake placeholder:
+    swap this out for weight/distance-based rates later without touching
+    any caller — checkout() and the /shipping-config/ endpoint both just
+    read these two settings.
+    """
+    threshold = Decimal(str(settings.ECOMMERCE_FREE_SHIPPING_THRESHOLD))
+    flat_cost = Decimal(str(settings.ECOMMERCE_FLAT_SHIPPING_COST))
+    if subtotal >= threshold:
+        return Decimal("0")
+    return flat_cost
+
+
+def calculate_tax(order_items) -> Decimal:
+    """Sums each line's real tax, using OrderItem.tax_rate_snapshot (itself
+    snapshotted from Product.tax_rate at checkout time — see models.py).
+    Nothing fabricated: a product with tax_rate=0 contributes 0, same as
+    if VAT genuinely doesn't apply to it."""
+    return sum((item.line_tax for item in order_items), Decimal("0.00"))
+
+
 def reserve_stock_for_order(order: Order):
     for item in order.items.select_related("variant", "product"):
         record_movement(
@@ -111,6 +135,7 @@ def checkout(cart: Cart, shipping_address, payment_method: str, organization,
 
     subtotal = sum(
         (i.unit_price_snapshot * i.quantity for i in items), Decimal("0"))
+    shipping_cost = calculate_shipping(subtotal)
 
     order = Order.objects.create(
         organization=organization,
@@ -120,7 +145,9 @@ def checkout(cart: Cart, shipping_address, payment_method: str, organization,
         guest_email=guest_email,
         guest_phone=guest_phone,
         subtotal=subtotal,
-        total=subtotal,  # extend with shipping/tax when that's designed
+        shipping_cost=shipping_cost,
+        tax_amount=Decimal("0"),  # filled in below, once line items (and their tax) exist
+        total=subtotal + shipping_cost,  # corrected below once tax_amount is known
         idempotency_key=idempotency_key,
         status="pending_payment",
     )
@@ -131,8 +158,14 @@ def checkout(cart: Cart, shipping_address, payment_method: str, organization,
             variant=i.variant,
             product_name_snapshot=i.product.name,
             unit_price_snapshot=i.unit_price_snapshot,
+            tax_rate_snapshot=i.product.tax_rate,
             quantity=i.quantity,
         )
+
+    tax_amount = calculate_tax(order.items.all())
+    order.tax_amount = tax_amount
+    order.total = subtotal + shipping_cost + tax_amount
+    order.save(update_fields=["tax_amount", "total"])
 
     reserve_stock_for_order(order)
 

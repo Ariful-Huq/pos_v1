@@ -11,6 +11,7 @@ apps/core/models.py differs, adjust the import/fields below — everything else
 in this file is independent of that detail.
 """
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -153,6 +154,12 @@ class Order(BaseModel):
     guest_phone = models.CharField(max_length=32, blank=True)
 
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    # Both computed server-side in services.checkout(), never trusted from
+    # the client — shipping_cost from calculate_shipping(), tax_amount from
+    # summing each line's OrderItem.tax_rate_snapshot. total = subtotal +
+    # shipping_cost + tax_amount.
+    shipping_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
     # idempotency for checkout retries / double-submits, mirrors
@@ -173,14 +180,21 @@ class OrderItem(BaseModel):
         ProductVariant, on_delete=models.PROTECT, related_name="+", null=True, blank=True
     )
     # snapshots — an order must still read correctly after a product is
-    # renamed/repriced later, exactly like sales.SaleItem.
+    # renamed/repriced later, exactly like sales.SaleItem. tax_rate_snapshot
+    # follows the same logic: if Product.tax_rate changes later, past
+    # invoices shouldn't silently change with it.
     product_name_snapshot = models.CharField(max_length=255)
     unit_price_snapshot = models.DecimalField(max_digits=12, decimal_places=2)
+    tax_rate_snapshot = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     quantity = models.PositiveIntegerField()
 
     @property
     def line_total(self):
         return self.unit_price_snapshot * self.quantity
+
+    @property
+    def line_tax(self):
+        return (self.line_total * self.tax_rate_snapshot / 100).quantize(Decimal("0.01"))
 
 
 class Payment(BaseModel):

@@ -30,7 +30,9 @@ export default function TopBar({ onOpenMobileMenu, title }) {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/pos")}
-          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"
+          className="flex items-center justify-center gap-1.5 h-9 text-sm px-3 rounded-lg
+                     bg-amber-500 hover:bg-amber-600 text-white transition-colors
+                     focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
           title={t("pos.openRegister")}
         >
           <Monitor size={16} />
@@ -38,18 +40,17 @@ export default function TopBar({ onOpenMobileMenu, title }) {
 
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-surface-200 hover:bg-surface-100"
+          className="flex items-center justify-center gap-1.5 h-9 text-sm px-3 rounded-lg border border-surface-200 hover:bg-surface-100"
           title={t("common.language")}
         >
-
-          {i18n.language === "bn" ? "বাং" : "EN"}
+          {i18n.language === "bn" ? "EN" : "বাং"}
         </button>
 
         {user?.branch_access?.length > 1 && (
           <select
             value={activeBranchId || ""}
             onChange={(e) => switchBranch(e.target.value)}
-            className="text-sm border border-surface-200 rounded-lg px-3 py-2 bg-white font-mono
+            className="text-sm border border-surface-200 rounded-lg px-3 h-9 bg-white font-mono
                        focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             {user.branch_access.map((b) => (

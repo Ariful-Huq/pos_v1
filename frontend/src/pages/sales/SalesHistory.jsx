@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { Monitor } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Button from "../../components/ui/Button";
@@ -88,7 +88,7 @@ export default function SalesHistory() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-ink-400">{sales.length} sale{sales.length !== 1 ? "s" : ""}</p>
         <Button variant="primary" onClick={() => navigate("/pos")}>
-          <Plus size={16} /> {t("pos.openRegister")}
+          <Monitor size={16} /> {t("pos.openRegister")}
         </Button>
       </div>
 

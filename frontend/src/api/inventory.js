@@ -5,8 +5,8 @@ export async function listStockLevels() {
   return data.results;
 }
 
-export async function adjustStock(product, quantity, notes = "") {
-  const { data } = await client.post("/inventory/stock-levels/adjust/", { product, quantity, notes });
+export async function adjustStock(product, quantity, notes = "", branch = undefined) {
+  const { data } = await client.post("/inventory/stock-levels/adjust/", { product, quantity, notes, branch });
   return data;
 }
 

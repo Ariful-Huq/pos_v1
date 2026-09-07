@@ -51,7 +51,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       >
         <div className="flex items-center justify-between px-4 h-16 border-b border-white/10">
           {!collapsed && (
-            <span className="font-display font-semibold text-lg tracking-tight">POS</span>
+            <span className="font-display font-semibold text-lg tracking-tight">{t("pos.title")}</span>
           )}
           <button
             onClick={onCloseMobile}
@@ -77,13 +77,23 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
               end={end}
               onClick={onCloseMobile}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                `flex items-center h-11 rounded-lg text-sm font-medium overflow-hidden
+                 transition-[width] duration-200 ease-in-out
+                 ${collapsed ? "w-11" : "w-full"}
                  ${isActive ? "bg-white/15 text-white" : "text-brand-100/80 hover:bg-white/10 hover:text-white"}`
               }
               title={collapsed ? t(`nav.${key}`) : undefined}
             >
-              <Icon size={18} className="shrink-0" />
-              {!collapsed && <span>{t(`nav.${key}`)}</span>}
+              <span className="flex items-center justify-center w-11 h-11 shrink-0">
+                <Icon size={18} />
+              </span>
+              <span
+                className={`whitespace-nowrap transition-opacity duration-150 ${
+                  collapsed ? "opacity-0" : "opacity-100"
+                }`}
+              >
+                {t(`nav.${key}`)}
+              </span>
             </NavLink>
           ))}
         </nav>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api";
 import { useLanguage } from "../../components/LanguageProvider";
+import { calculateOrderTotals } from "../../lib/pricing";
 import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Truck, Undo2 } from "lucide-react";
 
 // The cart API doesn't embed a product image on line items today — this
@@ -26,6 +27,7 @@ export default function CartPage() {
   const [error, setError] = useState(null);
   const [promoCode, setPromoCode] = useState("");
   const [showPromoNote, setShowPromoNote] = useState(false);
+  const [shippingConfig, setShippingConfig] = useState(null);
 
   function load() {
     setError(null);
@@ -33,6 +35,9 @@ export default function CartPage() {
   }
 
   useEffect(load, []);
+  useEffect(() => {
+    api.shippingConfig().then(setShippingConfig).catch(() => setShippingConfig(null));
+  }, []);
 
   async function updateQty(itemId, quantity) {
     await api.updateCartItem(itemId, quantity);
@@ -67,6 +72,7 @@ export default function CartPage() {
   }
 
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totals = calculateOrderTotals(cart.items, shippingConfig);
   const dividerClass = "border-gray-300 dark:border-gray-700";
 
   return (
@@ -155,23 +161,29 @@ export default function CartPage() {
         <div className="space-y-2.5 text-sm">
           <div className="flex justify-between text-gray-600 dark:text-gray-300">
             <span>{t("subtotal_label", { count: itemCount })}</span>
-            <span className="font-price">৳{cart.total}</span>
+            <span className="font-price">৳{totals.subtotal.toFixed(2)}</span>
           </div>
-          {/* No shipping/tax calculation exists yet — shown as cosmetic
-              placeholders until the backend provides real values. */}
+          {/* Real now — computed from Product.tax_rate (per line) and the
+              same shipping settings services.calculate_shipping() uses on
+              the backend, via /shipping-config/. Still labeled "estimated"
+              because the order hasn't been created yet — checkout()
+              recomputes authoritatively at that point, though it should
+              always match this exactly since it's the same formula. */}
           <div className="flex justify-between text-gray-600 dark:text-gray-300">
             <span>{t("estimated_shipping_label")}</span>
-            <span className="text-gray-400 dark:text-gray-500">{t("calculated_at_checkout")}</span>
+            <span className="font-price">
+              {totals.shipping === 0 ? t("free_shipping") : `৳${totals.shipping.toFixed(2)}`}
+            </span>
           </div>
           <div className="flex justify-between text-gray-600 dark:text-gray-300">
             <span>{t("estimated_tax_label")}</span>
-            <span className="text-gray-400 dark:text-gray-500">{t("calculated_at_checkout")}</span>
+            <span className="font-price">৳{totals.tax.toFixed(2)}</span>
           </div>
         </div>
 
         <div className="flex justify-between items-baseline mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
           <span className="font-medium text-gray-900 dark:text-gray-100">{t("total_label")}</span>
-          <span className="font-price text-xl font-bold text-gray-900 dark:text-gray-100">৳{cart.total}</span>
+          <span className="font-price text-xl font-bold text-gray-900 dark:text-gray-100">৳{totals.total.toFixed(2)}</span>
         </div>
 
         <Link

@@ -191,3 +191,9 @@ CORS_ALLOW_CREDENTIALS = True
 ECOMMERCE_FULFILLMENT_BRANCH_ID = env(
     "ECOMMERCE_FULFILLMENT_BRANCH_ID", default=None)
 ECOMMERCE_ORGANIZATION_ID = env("ECOMMERCE_ORGANIZATION_ID", default=None)
+
+# Flat-rate shipping, free above a threshold — the simplest real shipping
+# rule rather than a fake placeholder. Both adjustable without a code
+# change. Amounts in the store's currency (Taka).
+ECOMMERCE_FLAT_SHIPPING_COST = env.float("ECOMMERCE_FLAT_SHIPPING_COST", default=60.0)
+ECOMMERCE_FREE_SHIPPING_THRESHOLD = env.float("ECOMMERCE_FREE_SHIPPING_THRESHOLD", default=2000.0)

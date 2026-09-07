@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Printer, Package } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
@@ -7,6 +7,7 @@ import DataTable from "../../components/ui/DataTable";
 import ActionMenu from "../../components/ui/ActionMenu";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import ProductFormModal from "./ProductFormModal";
+import PrintLabelsModal from "./PrintLabelsModal";
 import {
   listProducts,
   createProduct,
@@ -30,6 +31,8 @@ export default function Products() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const [labelTarget, setLabelTarget] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,14 +65,18 @@ export default function Products() {
     setFormOpen(true);
   }
 
+  // Returns the saved product so ProductFormModal can use its id for
+  // opening-stock entries right after creation.
   async function handleSubmit(form) {
+    let product;
     if (editing) {
-      await updateProduct(editing.id, form);
+      product = await updateProduct(editing.id, form);
     } else {
-      await createProduct(form);
+      product = await createProduct(form);
     }
     setFormOpen(false);
     await load();
+    return product;
   }
 
   function askDelete(product) {
@@ -89,6 +96,11 @@ export default function Products() {
   }
 
   const columns = [
+    { key: "image", header: "", render: (r) => (
+      <div className="w-9 h-9 rounded-md bg-surface-50 border border-surface-200 flex items-center justify-center overflow-hidden">
+        {r.image ? <img src={r.image} alt="" className="w-full h-full object-cover" /> : <Package size={14} className="text-surface-300" />}
+      </div>
+    )},
     { key: "sku", header: t("products.sku"), sortable: true, render: (r) => (
       <span className="font-figures">{r.sku}</span>
     )},
@@ -103,6 +115,7 @@ export default function Products() {
     { key: "actions", header: "", render: (r) => (
       <ActionMenu items={[
         { label: t("common.edit"), onClick: () => openEdit(r) },
+        { label: t("products.printLabels"), icon: <Printer size={14} />, onClick: () => setLabelTarget(r) },
         { divider: true },
         { label: t("common.delete"), danger: true, onClick: () => askDelete(r) },
       ]} />
@@ -135,6 +148,12 @@ export default function Products() {
         categories={categories}
         units={units}
         initial={editing}
+      />
+
+      <PrintLabelsModal
+        open={!!labelTarget}
+        onClose={() => setLabelTarget(null)}
+        product={labelTarget}
       />
 
       <ConfirmDialog
