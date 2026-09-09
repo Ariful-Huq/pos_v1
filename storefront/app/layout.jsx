@@ -14,12 +14,36 @@ import SearchBar from "../components/SearchBar";
 import T from "../components/T";
 import ThemeToggle from "../components/ThemeToggle";
 
-export const metadata = {
-  title: "PonnoSomver",
-  description: "pos_v1 storefront",
-};
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/storefront";
 
-export default function RootLayout({ children }) {
+// Real — fetched from the same Organization row staff edit in the admin's
+// Settings > Business Profile tab (name + logo). Falls back to null on
+// any failure (backend down, no organization configured yet) rather than
+// breaking the whole site — callers below fall back to the "site_name"
+// translation key and text-only branding when this is null.
+async function getOrganization() {
+  try {
+    const res = await fetch(`${BASE_URL}/organization/`, {
+      next: { revalidate: 300 }, // org branding rarely changes — 5 min cache
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata() {
+  const org = await getOrganization();
+  return {
+    title: org?.name || "PonnoSomver",
+    description: "pos_v1 storefront",
+  };
+}
+
+export default async function RootLayout({ children }) {
+  const org = await getOrganization();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
@@ -44,9 +68,15 @@ export default function RootLayout({ children }) {
             <AnnouncementBar />
 
             <header className="border-b border-gray-200 dark:border-gray-800">
-			  <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
-                <Link href="/" className="font-heading text-xl font-semibold text-brand-700 dark:text-brand-500 shrink-0">
-                  <T id="site_name" />
+              <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
+                <Link href="/" className="flex items-center gap-2 shrink-0">
+                  {org?.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={org.logo} alt={org.name} className="h-8 w-8 object-contain rounded" />
+                  ) : null}
+                  <span className="font-heading text-xl font-semibold text-brand-700 dark:text-brand-500">
+                    {org?.name || <T id="site_name" />}
+                  </span>
                 </Link>
                 <nav className="flex gap-6 text-sm shrink-0">
                   <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-brand-600"><T id="nav_home" /></Link>
@@ -60,7 +90,7 @@ export default function RootLayout({ children }) {
                   <ThemeToggle />
                   <AccountMenu />
                   <CartBadge />
-				</div>
+                </div>
               </div>
             </header>
 
@@ -70,7 +100,7 @@ export default function RootLayout({ children }) {
 
             <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
 
-            <Footer />
+            <Footer org={org} />
 
             <AuthModal />
           </AuthProvider>

@@ -26,6 +26,7 @@ export default function Footer() {
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase mb-3">{t("footer_support_heading")}</p>
           <ul className="space-y-2 text-sm">
+            <li><Link href="/track-order" className="text-gray-600 dark:text-gray-300 hover:text-brand-600">{t("track_order_link")}</Link></li>
             <li><span className="text-gray-400 dark:text-gray-600">{t("footer_contact")}</span></li>
           </ul>
         </div>

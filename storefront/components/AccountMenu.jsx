@@ -29,13 +29,21 @@ export default function AccountMenu() {
 
   if (!isAuthenticated) {
     return (
-      <button
-        onClick={() => openAuthModal("login")}
-        className="h-9 px-3 flex items-center gap-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 text-sm font-medium"
-      >
-        <User className="h-4 w-4" />
-        <span className="hidden sm:inline">{t("account_sign_in")}</span>
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => openAuthModal("login")}
+          className="h-9 px-3 flex items-center gap-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 text-sm font-medium"
+        >
+          <User className="h-4 w-4" />
+          <span className="hidden sm:inline">{t("account_sign_in")}</span>
+        </button>
+        <Link
+          href="/track-order"
+          className="h-9 px-3 hidden md:flex items-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 text-sm font-medium"
+        >
+          {t("track_order_link")}
+        </Link>
+      </div>
     );
   }
 

@@ -41,7 +41,8 @@ from . import services
 from .models import Address, Cart, CustomerAccount, HomeBanner, Order
 from .serializers import (
     AddressSerializer, CartSerializer, CategoryPublicSerializer, CheckoutSerializer,
-    CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer, HomeBannerPublicSerializer, OrderSerializer,
+    CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer,
+    HomeBannerPublicSerializer, OrderSerializer, OrderTrackSerializer, OrganizationPublicSerializer,
 )
 
 SIGNING_SALT = "ecommerce.customer-auth"
@@ -226,6 +227,19 @@ class HomeBannerListView(generics.ListAPIView):
         )
 
 
+class OrganizationPublicView(APIView):
+    """Public. Real storefront branding — name/logo/contact, sourced from
+    the same Organization row staff edit in the admin's Settings > Business
+    Profile tab. No separate "storefront branding" model — one source of
+    truth, same as everywhere else in this app."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        org = get_current_organization()
+        return Response(OrganizationPublicSerializer(org, context={"request": request}).data)
+
+
 # ---------------------------------------------------------------------------
 # Cart — works for guest (session-keyed) or authenticated customer
 # ---------------------------------------------------------------------------
@@ -347,3 +361,35 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+
+
+class OrderTrackView(APIView):
+    """Public. The actual answer to 'how does a guest track their order':
+    order number + the email or phone used at checkout, both required (see
+    OrderTrackSerializer's docstring). Also matches a signed-in customer's
+    email against their own orders, so this works for either checkout path
+    without needing to know which one was used."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = OrderTrackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order_number = serializer.validated_data["order_number"].strip()
+        contact = serializer.validated_data["contact"].strip()
+
+        order = Order.objects.filter(order_number__iexact=order_number).filter(
+            Q(guest_email__iexact=contact)
+            | Q(guest_phone=contact)
+            | Q(customer__email__iexact=contact)
+            | Q(customer__phone=contact)
+        ).first()
+
+        if not order:
+            # Deliberately generic — doesn't reveal whether the order
+            # number exists at all, only that this combination didn't match.
+            return Response(
+                {"detail": "No order found matching that order number and contact info."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(OrderSerializer(order, context={"request": request}).data)

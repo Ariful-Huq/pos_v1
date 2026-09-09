@@ -47,6 +47,15 @@ class CustomerLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+class OrderTrackSerializer(serializers.Serializer):
+    """Deliberately requires BOTH order_number and a contact value —
+    order_number alone would let anyone who saw a receipt/box guess at
+    other people's orders by trying sequential-looking numbers. Matching
+    against the actual contact info on file is the real guard here."""
+    order_number = serializers.CharField()
+    contact = serializers.CharField(help_text="Email or phone used at checkout")
+
+
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
@@ -135,6 +144,18 @@ class CategoryPublicSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     parent = serializers.UUIDField(source="parent_id", allow_null=True)
+
+
+class OrganizationPublicSerializer(serializers.Serializer):
+    """Public storefront branding — name/logo/contact only. Deliberately
+    excludes legal_name and is_active, which are internal/staff concerns.
+    Not a ModelSerializer against apps.tenants' Organization for the same
+    reason as CategoryPublicSerializer above: avoid coupling this public
+    shape to whatever fields that model happens to have."""
+    name = serializers.CharField()
+    logo = serializers.ImageField(allow_null=True)
+    contact_email = serializers.EmailField(allow_blank=True)
+    contact_phone = serializers.CharField(allow_blank=True)
 
 
 class CustomerAccountSerializer(serializers.ModelSerializer):

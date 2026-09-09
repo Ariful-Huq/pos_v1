@@ -11,6 +11,10 @@ class Organization(BaseModel):
     legal_name = models.CharField(max_length=200, blank=True)
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=30, blank=True)
+    # NEW — used both in the admin (Settings > Business Profile) and
+    # publicly by the storefront (header/footer/invoice branding). Same
+    # upload_to convention as catalog.Product.image.
+    logo = models.ImageField(upload_to="organization/", null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

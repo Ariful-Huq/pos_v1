@@ -50,6 +50,7 @@
   "settings": {
     "businessProfile": "ব্যবসার প্রোফাইল",
     "branches": "শাখাসমূহ",
+    "businessLogo": "ব্যবসার লোগো",
     "businessName": "ব্যবসার নাম",
     "legalName": "আইনি নাম",
     "contactEmail": "যোগাযোগের ইমেইল",
@@ -177,7 +178,7 @@
     "promoCodePlaceholder": "প্রোমো কোড",
     "apply": "প্রয়োগ করুন",
     "promoComingSoon": "প্রোমো কোড শীঘ্রই আসছে।",
-    "title": "পণ্যসম্ভার",
+    "title": "পিওএস",
     "home": "হোম",
     "reset": "রিসেট",
     "recentDrafts": "সাম্প্রতিক খসড়া",

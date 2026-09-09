@@ -47,6 +47,44 @@
     "signingIn": "Signing in…",
     "error": "Incorrect username or password."
   },
+  "settings": {
+    "businessProfile": "Business Profile",
+    "branches": "Branches",
+    "businessLogo": "Business logo",
+    "businessName": "Business name",
+    "legalName": "Legal name",
+    "contactEmail": "Contact email",
+    "contactPhone": "Contact phone",
+    "saved": "Saved",
+    "addBranch": "Add Branch",
+    "editBranch": "Edit branch",
+    "branchName": "Branch name",
+    "branchCode": "Branch code",
+    "address": "Address",
+    "phone": "Phone",
+    "noBranches": "No branches yet.",
+    "deleteBranchTitle": "Delete this branch?",
+    "deleteBranchMessage": "\"{{name}}\" will be permanently removed. This is only possible if it has no sales, stock, or accounting history."
+  },
+  "salesHistory": {
+    "voidSale": "Void sale",
+    "voidTitle": "Void this sale?",
+    "voidMessage": "This will reverse the stock deduction for {{number}}. This cannot be undone.",
+    "reasonPlaceholder": "Reason (optional)",
+    "invoice": "Invoice",
+    "branch": "Branch",
+    "date": "Date"
+  },
+  "dashboard": {
+    "todaysSales": "Today's Sales",
+    "todaysExpenses": "Today's Expenses",
+    "outOfStock": "Out of Stock",
+    "lowStock": "Low Stock",
+    "recentSales": "Recent Sales",
+    "invoice": "Invoice",
+    "customer": "Customer",
+    "noSales": "No completed sales yet."
+  },
   "products": {
     "count_one": "{{count}} product",
     "count_other": "{{count}} products",
@@ -140,7 +178,7 @@
     "promoCodePlaceholder": "Promo code",
     "apply": "Apply",
     "promoComingSoon": "Promo codes are coming soon.",
-    "title": "PonnoSomver",
+    "title": "POS",
     "home": "Home",
     "reset": "Reset",
     "recentDrafts": "Recent Drafts",
@@ -251,42 +289,5 @@
     "revenue": "Revenue",
     "noSalesPeriod": "No sales in this period.",
     "daysLabel": "{{count}} days"
-  },
-  "salesHistory": {
-    "voidSale": "Void sale",
-    "voidTitle": "Void this sale?",
-    "voidMessage": "This will reverse the stock deduction for {{number}}. This cannot be undone.",
-    "reasonPlaceholder": "Reason (optional)",
-    "invoice": "Invoice",
-    "branch": "Branch",
-    "date": "Date"
-  },
-  "dashboard": {
-    "todaysSales": "Today's Sales",
-    "todaysExpenses": "Today's Expenses",
-    "outOfStock": "Out of Stock",
-    "lowStock": "Low Stock",
-    "recentSales": "Recent Sales",
-    "invoice": "Invoice",
-    "customer": "Customer",
-    "noSales": "No completed sales yet."
-  },
-  "settings": {
-    "businessProfile": "Business Profile",
-    "branches": "Branches",
-    "businessName": "Business name",
-    "legalName": "Legal name",
-    "contactEmail": "Contact email",
-    "contactPhone": "Contact phone",
-    "saved": "Saved",
-    "addBranch": "Add Branch",
-    "editBranch": "Edit branch",
-    "branchName": "Branch name",
-    "branchCode": "Branch code",
-    "address": "Address",
-    "phone": "Phone",
-    "noBranches": "No branches yet.",
-    "deleteBranchTitle": "Delete this branch?",
-    "deleteBranchMessage": "\"{{name}}\" will be permanently removed. This is only possible if it has no sales, stock, or accounting history."
   }
 }

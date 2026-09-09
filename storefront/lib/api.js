@@ -113,4 +113,5 @@ export const api = {
 
   orders: () => request("/orders/"),
   order: (id) => request(`/orders/${id}/`),
+  trackOrder: (data) => request("/orders/track/", { method: "POST", body: data, auth: false }),
 };

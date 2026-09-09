@@ -13,14 +13,14 @@ export default function HeroSection({ banner }) {
   const ctaHref = banner?.cta_url || "/products";
 
   if (banner?.image) {
-    // Full-width 16:9 banner, copy overlaid on the image's own empty side
+    // Full-width 21:9 banner, copy overlaid on the image's own empty side
     // and anchored to the bottom so it clears whatever's already drawn
     // near the top of the asset (logo, badges, etc.). The copy sits on a
     // photo rather than the page background, so it's deliberately fixed
     // to white/light tones here instead of following light/dark mode —
     // the gradient behind it is what keeps it legible against any image.
     return (
-      <section className="relative w-full aspect-video rounded-xl overflow-hidden mb-14">
+      <section className="relative w-full aspect-[4/3] sm:aspect-[21/9] rounded-xl overflow-hidden mb-14">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={banner.image}

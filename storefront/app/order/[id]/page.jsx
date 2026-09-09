@@ -78,6 +78,12 @@ export default function OrderConfirmationPage({ params }) {
         {t("total", { value: Number(order.total).toFixed(2) })}
       </p>
 
+      {!order.order_number ? null : (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-2">
+          {t("order_track_hint", { number: order.order_number })}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-3">
         <Link
           href="/products"

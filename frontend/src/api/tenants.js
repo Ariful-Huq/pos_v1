@@ -1,12 +1,30 @@
 import client from "./client";
 
+// Same pattern as api/catalog.js's toRequestBody() for Product.image —
+// builds multipart/form-data only when a logo File is actually present,
+// otherwise sends plain JSON exactly as before (no behavior change for
+// text-only saves).
+function toRequestBody(payload) {
+  if (!payload.logo || !(payload.logo instanceof File)) {
+    const { logo, ...rest } = payload; // eslint-disable-line no-unused-vars
+    return rest;
+  }
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    formData.append(key, value);
+  });
+  return formData;
+}
+
 export async function getOrganization() {
   const { data } = await client.get("/tenants/organization/");
   return data;
 }
 
 export async function updateOrganization(payload) {
-  const { data } = await client.patch("/tenants/organization/", payload);
+  const body = toRequestBody(payload);
+  const { data } = await client.patch("/tenants/organization/", body);
   return data;
 }
 

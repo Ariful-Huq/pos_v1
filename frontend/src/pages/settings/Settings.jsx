@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { Plus, ImagePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Tabs from "../../components/ui/Tabs";
 import Button from "../../components/ui/Button";
@@ -25,6 +25,8 @@ export default function Settings() {
   const [orgForm, setOrgForm] = useState(null);
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgSaved, setOrgSaved] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
 
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,19 +42,31 @@ export default function Settings() {
     const [orgData, branchData] = await Promise.all([getOrganization(), listBranches()]);
     setOrg(orgData);
     setOrgForm(orgData);
+    setLogoPreview(orgData?.logo || null);
     setBranches(branchData);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  function handleLogoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
   async function handleSaveOrg(e) {
     e.preventDefault();
     setOrgSaving(true);
     setOrgSaved(false);
     try {
-      const updated = await updateOrganization(orgForm);
+      const payload = logoFile ? { ...orgForm, logo: logoFile } : orgForm;
+      const updated = await updateOrganization(payload);
       setOrg(updated);
+      setOrgForm(updated);
+      setLogoFile(null);
+      setLogoPreview(updated?.logo || null);
       setOrgSaved(true);
     } finally {
       setOrgSaving(false);
@@ -130,6 +144,17 @@ export default function Settings() {
         <div className="bg-white rounded-xl border border-surface-200 p-10 text-center text-ink-400">{t("common.loading")}</div>
       ) : tab === "profile" ? (
         <form onSubmit={handleSaveOrg} className="bg-white rounded-xl border border-surface-200 p-6 max-w-lg space-y-3">
+          <label className="block">
+            <span className="block text-sm font-medium text-ink-700 mb-1">{t("settings.businessLogo")}</span>
+            <label className="w-24 h-24 rounded-lg border-2 border-dashed border-surface-200 flex items-center justify-center cursor-pointer overflow-hidden hover:border-brand-500">
+              {logoPreview ? (
+                <img src={logoPreview} alt="" className="w-full h-full object-contain" />
+              ) : (
+                <ImagePlus size={22} className="text-ink-400" />
+              )}
+              <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+            </label>
+          </label>
           <label className="block">
             <span className="block text-sm font-medium text-ink-700 mb-1">{t("settings.businessName")}</span>
             <input value={orgForm.name} onChange={(e) => setOrgForm((f) => ({ ...f, name: e.target.value }))} required className="input" />
