@@ -4,13 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { useLanguage } from "./LanguageProvider";
-import { Heart } from 'lucide-react';
+import { useAuth } from "./AuthProvider";
+import { useWishlist } from "./WishlistProvider";
+import { Heart, Star } from 'lucide-react';
 
 export default function ProductCard({ product }) {
   const { t } = useLanguage();
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isWishlisted, toggle } = useWishlist();
   const [status, setStatus] = useState("idle"); // idle | adding | added | error
-  const [wishlisted, setWishlisted] = useState(false); // local cosmetic state
+  const [wishlistBusy, setWishlistBusy] = useState(false);
   const isVariant = product.product_type === "variant";
+  const wishlisted = isWishlisted(product.id);
 
   async function handleQuickAdd(e) {
     e.preventDefault();
@@ -24,9 +29,18 @@ export default function ProductCard({ product }) {
     }
   }
 
-  function toggleWishlist() {
-    // TODO: wire to real wishlist API when available
-    setWishlisted((w) => !w);
+  async function handleToggleWishlist(e) {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+    setWishlistBusy(true);
+    try {
+      await toggle(product);
+    } finally {
+      setWishlistBusy(false);
+    }
   }
 
   return (
@@ -43,8 +57,9 @@ export default function ProductCard({ product }) {
           {/* Wishlist button: shown on hover/focus of the image area */}
           <button
             type="button"
-            onClick={toggleWishlist}
-            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shadow hover:text-green-700 focus:text-green-700"
+            onClick={handleToggleWishlist}
+            disabled={wishlistBusy}
+            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shadow hover:text-green-700 focus:text-green-700 disabled:opacity-50"
             aria-label="Toggle wishlist"
           >
             <Heart
@@ -57,6 +72,12 @@ export default function ProductCard({ product }) {
         </div>
 
         <h3 className="font-medium text-sm mb-1 text-gray-900 dark:text-gray-100">{product.name}</h3>
+        {product.review_count > 0 && (
+          <div className="flex items-center gap-1 mb-1 text-xs text-gray-500 dark:text-gray-400">
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+            {product.average_rating} · {product.review_count}
+          </div>
+        )}
         <p className="font-price text-sm text-brand-700 dark:text-brand-500 mb-3">৳{product.selling_price}</p>
       </Link>
 

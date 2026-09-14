@@ -152,7 +152,7 @@ export default function Settings() {
               ) : (
                 <ImagePlus size={22} className="text-ink-400" />
               )}
-              <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+              <input type="file" accept="image/*,.svg" onChange={handleLogoChange} className="hidden" />
             </label>
           </label>
           <label className="block">

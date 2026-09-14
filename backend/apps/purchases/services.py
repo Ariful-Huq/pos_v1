@@ -1,9 +1,23 @@
-# backend/apps/purchases/services.py
-
 from decimal import Decimal
 from django.db import transaction
 from apps.inventory.services import record_movement
-from .models import PurchaseOrder
+from .models import PurchaseOrder, BranchPurchaseSequence
+
+
+def generate_po_number(branch):
+    """
+    Locks the branch's purchase sequence row and returns the next
+    gapless PO number, formatted like 'PO-DHK-01-000042' — same pattern
+    as sales.services.generate_sale_number(). Only called when the
+    caller didn't supply their own reference_number (i.e. no supplier
+    reference was given).
+    """
+    seq, _ = BranchPurchaseSequence.objects.select_for_update().get_or_create(
+        branch=branch, defaults={"last_number": 0}
+    )
+    seq.last_number += 1
+    seq.save(update_fields=["last_number"])
+    return f"PO-{branch.code}-{seq.last_number:06d}"
 
 
 def receive_purchase_order_item(item, quantity, received_by=None):

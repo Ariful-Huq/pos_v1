@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment
+from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment, Review, WishlistItem
 
 
 class HomeBannerPublicSerializer(serializers.ModelSerializer):
@@ -153,7 +153,12 @@ class OrganizationPublicSerializer(serializers.Serializer):
     reason as CategoryPublicSerializer above: avoid coupling this public
     shape to whatever fields that model happens to have."""
     name = serializers.CharField()
-    logo = serializers.ImageField(allow_null=True)
+    # FileField, not ImageField — must match Organization.logo's type
+    # (see tenants/models.py). This is read-only here (GET only, no write
+    # validation happens through this serializer), but ImageField.to_
+    # representation still assumes a Pillow-openable file in some DRF
+    # versions, so match the type to be safe rather than rely on that.
+    logo = serializers.FileField(allow_null=True)
     contact_email = serializers.EmailField(allow_blank=True)
     contact_phone = serializers.CharField(allow_blank=True)
 
@@ -166,3 +171,39 @@ class CustomerAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerAccount
         fields = ["id", "email", "full_name", "phone"]
+
+
+class WishlistProductSerializer(serializers.Serializer):
+    """Minimal product shape for a wishlist row — enough to render a card
+    and link through, not the full ProductPublicSerializer."""
+    id = serializers.UUIDField()
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    image = serializers.ImageField(allow_null=True)
+    selling_price = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    product = WishlistProductSerializer(read_only=True)
+
+    class Meta:
+        model = WishlistItem
+        fields = ["id", "product", "variant", "created_at"]
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Public read shape — shown on the product detail page's Reviews tab."""
+    customer_name = serializers.CharField(source="customer.full_name", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ["id", "customer_name", "rating", "comment", "created_at"]
+
+
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    """Write shape — product and customer come from the URL/request, not
+    the request body (a review always belongs to whoever's authenticated,
+    never something the client can spoof)."""
+    class Meta:
+        model = Review
+        fields = ["rating", "comment"]

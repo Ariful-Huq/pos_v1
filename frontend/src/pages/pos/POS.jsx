@@ -5,6 +5,7 @@ import {
   Loader2, Minus, ArrowLeft, Printer, Banknote, CreditCard, Smartphone, Wallet2, X,
   Languages, Settings as SettingsIcon, Maximize, Minimize, Home, RotateCcw, FileClock,
   User as UserIcon, Lock as LockIcon, LogOut, Wifi, UserPlus, Undo2,
+  Zap, Eye, Keyboard, Receipt as ReceiptIcon, Check, List as ListIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Button from "../../components/ui/Button";
@@ -13,6 +14,7 @@ import Tabs from "../../components/ui/Tabs";
 import NumericKeypad from "../../components/ui/NumericKeypad";
 import ActionMenu from "../../components/ui/ActionMenu";
 import LockOverlay from "../../components/ui/LockOverlay";
+import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { setLanguage } from "../../i18n";
 import {
@@ -23,6 +25,77 @@ import { listProducts, listCategories } from "../../api/catalog";
 
 const CATALOG_PAGE_SIZE = 24;
 const QUICK_CASH_AMOUNTS = [50, 100, 500, 1000];
+
+// No organization-name field is exposed by the API yet (Organization.name
+// exists on the backend but /me and /sales don't return it), so this is
+// hardcoded for now. Wire it up to a real field if that changes.
+const ORG_NAME = "PonnoSomver";
+
+// Receipt paper width — no backend field for this exists yet (it's a
+// per-terminal printer setting, not really organization/sale data), so
+// it's kept as a per-browser localStorage setting for now, editable via
+// the gear icon in the POS header (see POSSettingsModal). Defaults to
+// 80mm, the most common thermal receipt width.
+const RECEIPT_WIDTH_STORAGE_KEY = "pos.receiptPaperWidthMm";
+const RECEIPT_WIDTH_MIN_MM = 40;
+const RECEIPT_WIDTH_MAX_MM = 300;
+const RECEIPT_WIDTH_PRESETS_MM = [58, 80];
+const DEFAULT_RECEIPT_WIDTH_MM = 80;
+
+function isValidReceiptWidthMm(value) {
+  return Number.isFinite(value) && value >= RECEIPT_WIDTH_MIN_MM && value <= RECEIPT_WIDTH_MAX_MM;
+}
+
+function getStoredReceiptWidthMm() {
+  const stored = Number(localStorage.getItem(RECEIPT_WIDTH_STORAGE_KEY));
+  return isValidReceiptWidthMm(stored) ? stored : DEFAULT_RECEIPT_WIDTH_MM;
+}
+
+// Invoice format ("thermal" vs "a4") — only "thermal" actually does
+// anything right now (drives the receipt preview/print above); "a4" is a
+// placeholder for a future A4 PDF invoice. Stored separately from the
+// paper-width setting since it gates whether that setting is even shown.
+const INVOICE_FORMAT_STORAGE_KEY = "pos.invoiceFormat";
+const DEFAULT_INVOICE_FORMAT = "thermal";
+
+function getStoredInvoiceFormat() {
+  const stored = localStorage.getItem(INVOICE_FORMAT_STORAGE_KEY);
+  return stored === "thermal" || stored === "a4" ? stored : DEFAULT_INVOICE_FORMAT;
+}
+
+// Everything below is UI-only for now — POS Settings mirrors a fuller
+// settings screen that isn't wired to real behavior yet (no backend
+// fields, no functional effect elsewhere in the app). It's still
+// persisted per-browser so it doesn't reset every time the modal opens,
+// but toggling these currently just changes what's shown in the modal.
+// Defaults match what the mock design specifies.
+const POS_SETTINGS_STORAGE_KEY = "pos.settings";
+const DEFAULT_POS_SETTINGS = {
+  quickAddCustomer: true,
+  customerPurchaseHistory: true,
+  barcodeScanningSound: true,
+  enableHoldSales: true,
+  enableCustomerPoints: false,
+  allowOverselling: false,
+  printInvoiceAutomatically: true,
+  showProductImages: true,
+  showStockQuantity: true,
+  showCategories: true,
+  showBrands: true,
+  itemsPerPage: 12,
+  openCashDrawerOnCashPayment: false,
+  receiptPrinterName: "",
+  enableKeyboardShortcuts: true,
+};
+
+function getStoredPOSSettings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(POS_SETTINGS_STORAGE_KEY));
+    return { ...DEFAULT_POS_SETTINGS, ...(stored && typeof stored === "object" ? stored : {}) };
+  } catch {
+    return { ...DEFAULT_POS_SETTINGS };
+  }
+}
 
 const PAYMENT_METHODS = [
   { value: "cash", icon: Banknote, labelKey: "pos.methodCash" },
@@ -72,6 +145,74 @@ function getCursorStepValue(valueStr, cursorPos) {
     : Math.pow(10, -(digitIndex - effectiveDot));  // fractional digit
 }
 
+// A print-only stylesheet, injected once, that hides the whole app and
+// shows only the receipt preview when the browser print dialog is
+// triggered — without this, "Print receipt" printed the entire POS screen
+// (header, catalog, cart) onto a full Letter/A4 page. Mirrors the approach
+// in PrintLabelsModal.jsx. The receipt is a normal, visible on-screen
+// element (the left-hand preview on the success screen) — this stylesheet
+// strips its on-screen card styling (border/shadow/rounded corners) and
+// pulls it out of the page grid via fixed positioning so it prints
+// centered on its own, instead of wherever it happened to sit on screen.
+// Width isn't set here — it's user-configurable (see RECEIPT_WIDTH_* above),
+// so it's applied dynamically alongside the page size in
+// applyReceiptPrintDimensions, right before each print.
+const RECEIPT_PRINT_STYLE_ID = "pos-receipt-print-style";
+function ensureReceiptPrintStyle() {
+  if (document.getElementById(RECEIPT_PRINT_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = RECEIPT_PRINT_STYLE_ID;
+  style.textContent = `
+    @media print {
+      body * { visibility: hidden; }
+      #pos-receipt-sheet, #pos-receipt-sheet * { visibility: visible; }
+      #pos-receipt-sheet {
+        position: fixed !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+        padding: 4mm 3mm !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// @page's `size` property can't mix a fixed length with `auto` — "size:
+// Wmm auto" (what an earlier version of this used, to get a fixed-width
+// page whose height fits the content) is invalid and gets silently
+// dropped, which is why receipts were printing onto a full Letter/A4 sheet
+// with the receipt content stranded in the corner. There's no CSS-only fix
+// for "fixed width, height = however tall the content is", so instead this
+// measures the receipt's actual rendered height right before printing and
+// sets an explicit "Wmm x Ymm" page size (plus the matching sheet width)
+// to match it. Called fresh before every print, so it always reflects
+// whatever paper width is currently configured.
+const RECEIPT_PAGE_SIZE_STYLE_ID = "pos-receipt-page-size-style";
+function applyReceiptPrintDimensions(heightPx, widthMm) {
+  const heightMm = Math.max(60, Math.ceil((heightPx * 25.4) / 96) + 4);
+  let style = document.getElementById(RECEIPT_PAGE_SIZE_STYLE_ID);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = RECEIPT_PAGE_SIZE_STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = `
+    @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
+    @media print {
+      #pos-receipt-sheet {
+        width: ${widthMm}mm !important;
+        max-width: ${widthMm}mm !important;
+      }
+    }
+  `;
+}
+
 export default function POS() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -95,6 +236,9 @@ export default function POS() {
   const [scanValue, setScanValue] = useState("");
   const [scanError, setScanError] = useState("");
   const scanInputRef = useRef(null);
+  const receiptRef = useRef(null);
+  const [receiptWidthMm, setReceiptWidthMm] = useState(() => getStoredReceiptWidthMm());
+  const [receiptSettingsOpen, setReceiptSettingsOpen] = useState(false);
 
   // Catalog picker
   const [categories, setCategories] = useState([]);
@@ -136,6 +280,7 @@ export default function POS() {
   }, []);
 
   useEffect(() => { loadHeldSales(); }, [loadHeldSales]);
+  useEffect(() => { ensureReceiptPrintStyle(); }, []);
 
   useEffect(() => {
     if (screen === "register") scanInputRef.current?.focus();
@@ -350,6 +495,11 @@ export default function POS() {
     completeWithPayment("cash", tenderedNum);
   }
 
+  function handlePrintReceipt() {
+    if (receiptRef.current) applyReceiptPrintDimensions(receiptRef.current.offsetHeight, receiptWidthMm);
+    window.print();
+  }
+
   // ==================== HEADER (shared across every screen) ====================
 
   function Header() {
@@ -384,7 +534,7 @@ export default function POS() {
             <IconButton onClick={toggleLanguage} title={t("common.language")}>
               <span className="text-xs">{i18n.language === "bn" ? "EN" : "BN"}</span>
             </IconButton>
-            <IconButton onClick={() => navigate("/settings")} title={t("nav.settings")}>
+            <IconButton onClick={() => setReceiptSettingsOpen(true)} title={t("pos.settingsTitle")}>
               <SettingsIcon size={16} />
             </IconButton>
             <IconButton onClick={toggleFullscreen} title={t("common.fullscreen")}>
@@ -420,6 +570,12 @@ export default function POS() {
         <Header />
         <div className="flex-1 min-h-0 p-4 overflow-y-auto">{children}</div>
         {locked && <LockOverlay username={user?.username} onUnlock={() => setLocked(false)} />}
+        <POSSettingsModal
+          open={receiptSettingsOpen}
+          onClose={() => setReceiptSettingsOpen(false)}
+          receiptWidthMm={receiptWidthMm}
+          onReceiptWidthChange={setReceiptWidthMm}
+        />
       </div>
     );
   }
@@ -466,31 +622,133 @@ export default function POS() {
   }
 
   if (screen === "success" && completedSale) {
+    const branchName = completedSale.branch_name || t("pos.title");
+    const branchAddress = completedSale.branch_address || "";
+    const branchPhone = completedSale.branch_phone || "";
+    const cashierName = user?.full_name || user?.username || "";
+    const receiptDate = new Date(completedSale.sold_at || completedSale.created_at || Date.now()).toLocaleString();
+    const receiptItems = completedSale.items || [];
+    const receiptPayments = completedSale.payments || [];
+
     return (
       <Shell>
-        <div className="max-w-md mx-auto py-20 bg-white rounded-2xl border border-surface-200 p-8 text-center">
-          <CheckCircle2 className="mx-auto text-brand-700 mb-3" size={48} />
-          <h2 className="font-display font-semibold text-xl text-ink-900 mb-1">{t("pos.saleComplete")}</h2>
-          <p className="text-xs text-ink-400 mb-4">{t("pos.transactionCompleted", { number: completedSale.sale_number })}</p>
+        <div className="max-w-5xl mx-auto h-full py-6 grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          {/* Receipt preview — this column scrolls on its own when the
+              receipt is long; the summary column next to it stays put
+              (no shared/outer scrolling). The card's width comes from
+              receiptWidthMm (the configurable paper size — see the
+              RECEIPT_WIDTH_* constants and POSSettingsModal), and is
+              identical on screen and in print, so what's shown here is
+              exactly what prints — including the height measured for
+              applyReceiptPrintDimensions before printing, since nothing
+              re-wraps at a different width. The print stylesheet just
+              strips the on-screen card chrome (border/shadow/rounded
+              corners) and repositions it to the page for printing — see
+              ensureReceiptPrintStyle. */}
+          <div className="lg:col-span-3 flex justify-center overflow-y-auto max-h-[calc(100vh-12rem)] py-2">
+            <div
+              id="pos-receipt-sheet"
+              ref={receiptRef}
+              style={{ width: `${receiptWidthMm}mm` }}
+              className="shrink-0 bg-white rounded-xl border border-surface-200 shadow-sm p-4
+                         font-mono text-[11px] leading-snug text-black"
+            >
+              <div className="text-center">
+                <ReceiptLogo />
+                <p className="text-sm font-bold">{ORG_NAME}</p>
+                <p className="text-xs font-semibold mt-0.5">{branchName}</p>
+                {branchAddress && <p className="text-[10px] mt-0.5">{branchAddress}</p>}
+                {branchPhone && <p className="text-[10px]">{t("pos.receiptPhone")} {branchPhone}</p>}
+                <p className="text-[10px] mt-1">{t("pos.transactionCompleted", { number: completedSale.sale_number })}</p>
+              </div>
 
-          {remaining < 0 && (
-            <div className="bg-surface-50 rounded-xl p-4 mb-4">
-              <p className="text-xs uppercase tracking-wide text-ink-400">{t("pos.changeDue")}</p>
-              <p className="font-figures text-3xl font-semibold text-ink-900">৳{Math.abs(remaining).toFixed(2)}</p>
+              <div className="my-2 border-t border-dashed border-black" />
+
+              <div className="space-y-0.5">
+                <div className="flex justify-between"><span>{t("pos.receiptDate")}</span><span>{receiptDate}</span></div>
+                <div className="flex justify-between"><span>{t("pos.receiptCashier")}</span><span>{cashierName}</span></div>
+                <div className="flex justify-between"><span>{t("pos.receiptCustomer")}</span><span>{completedSale.customer_name || t("pos.walkIn")}</span></div>
+              </div>
+
+              <div className="my-2 border-t border-dashed border-black" />
+
+              <div className="space-y-1.5">
+                {receiptItems.map((item) => (
+                  <div key={item.id}>
+                    <p className="font-semibold">{item.product_name}</p>
+                    <div className="flex justify-between text-[10px]">
+                      <span>{Number(item.quantity)} × ৳{Number(item.unit_price).toFixed(2)}</span>
+                      <span>৳{Number(item.line_total).toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="my-2 border-t border-dashed border-black" />
+
+              <div className="space-y-0.5">
+                <div className="flex justify-between"><span>{t("pos.subtotal")}</span><span>৳{Number(completedSale.subtotal).toFixed(2)}</span></div>
+                {Number(completedSale.discount_amount) > 0 && (
+                  <div className="flex justify-between"><span>{t("pos.discount")}</span><span>-৳{Number(completedSale.discount_amount).toFixed(2)}</span></div>
+                )}
+                {Number(completedSale.tax_amount) > 0 && (
+                  <div className="flex justify-between"><span>{t("pos.tax")}</span><span>৳{Number(completedSale.tax_amount).toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between font-bold border-t border-black pt-0.5 mt-0.5">
+                  <span>{t("pos.total")}</span><span>৳{Number(completedSale.total_amount).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="my-2 border-t border-dashed border-black" />
+
+              <div className="space-y-0.5">
+                {receiptPayments.map((p) => (
+                  <div key={p.id} className="flex justify-between">
+                    <span>{t(PAYMENT_METHODS.find((m) => m.value === p.method)?.labelKey || "pos.payment")}</span>
+                    <span>৳{Number(p.amount).toFixed(2)}</span>
+                  </div>
+                ))}
+                {remaining < 0 && (
+                  <div className="flex justify-between font-semibold">
+                    <span>{t("pos.changeDue")}</span><span>৳{Math.abs(remaining).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="my-2 border-t border-dashed border-black" />
+              <p className="text-center text-[10px] mt-2">{t("pos.thankYou")}</p>
             </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <Button variant="outline" onClick={() => window.print()}>
-              <Printer size={16} /> {t("pos.printReceipt")}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/sales")}>
-              {t("pos.backToCart")}
-            </Button>
           </div>
-          <Button variant="primary" className="w-full mt-2" onClick={handleStartNew}>
-            {t("pos.newSale")}
-          </Button>
+
+          {/* Sale-complete summary + actions. Stays put (no scrolling) —
+              only the receipt column above scrolls. Action buttons are
+              stacked full-width rather than side-by-side, so labels like
+              "Print receipt" always fit on one line at full size, however
+              narrow this column ends up. */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-surface-200 p-8 text-center">
+            <CheckCircle2 className="mx-auto text-brand-700 mb-3" size={48} />
+            <h2 className="font-display font-semibold text-xl text-ink-900 mb-1">{t("pos.saleComplete")}</h2>
+            <p className="text-xs text-ink-400 mb-4">{t("pos.transactionCompleted", { number: completedSale.sale_number })}</p>
+
+            {remaining < 0 && (
+              <div className="bg-surface-50 rounded-xl p-4 mb-4">
+                <p className="text-xs uppercase tracking-wide text-ink-400">{t("pos.changeDue")}</p>
+                <p className="font-figures text-3xl font-semibold text-ink-900">৳{Math.abs(remaining).toFixed(2)}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full" onClick={handlePrintReceipt}>
+                <Printer size={16} /> {t("pos.printReceipt")}
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/sales")}>
+                {t("pos.backToCart")}
+              </Button>
+              <Button variant="primary" className="w-full" onClick={handleStartNew}>
+                {t("pos.newSale")}
+              </Button>
+            </div>
+          </div>
         </div>
       </Shell>
     );
@@ -898,6 +1156,363 @@ function Row({ label, value, negative, bold }) {
     <div className={`flex justify-between text-sm ${bold ? "font-semibold text-ink-900" : "text-ink-700"}`}>
       <span>{label}</span>
       <span className="font-figures">{negative && Number(value) > 0 ? "-" : ""}৳{Number(value).toFixed(2)}</span>
+    </div>
+  );
+}
+
+// Store logo for the printed receipt. Expects /icon.png in the frontend's
+// public/ folder (served at the site root) — renders nothing if it's
+// missing rather than showing a broken-image glyph on the receipt.
+function ReceiptLogo() {
+  const [error, setError] = useState(false);
+  if (error) return null;
+  return (
+    <img
+      src="/icon.png"
+      alt=""
+      className="h-10 w-10 mx-auto mb-1 object-contain"
+      onError={() => setError(true)}
+    />
+  );
+}
+
+// Small reusable pieces for POSSettingsModal below.
+
+function SettingsSection({ icon: Icon, label, children }) {
+  return (
+    <div>
+      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400 mb-3">
+        <Icon size={14} /> {label}
+      </h4>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function ToggleSwitch({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      // bg-brand-600 doesn't exist in this theme's palette (only
+      // 900/700/500/100 are defined — see src/index.css), so it silently
+      // produced no background at all, making on/off look identical.
+      // brand-700 is an actually-defined shade, plus a border so the off
+      // state reads as a track (not just pale fill) against white cards.
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors
+                  ${checked ? "bg-brand-700 border-brand-700" : "bg-surface-200 border-surface-200"}`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform
+                    ${checked ? "translate-x-6" : "translate-x-1"}`}
+      />
+    </button>
+  );
+}
+
+function SettingToggle({ label, hint, checked, onChange }) {
+  return (
+    <div className="flex items-start justify-between gap-3 bg-white border border-surface-200 rounded-xl p-4">
+      <div className="min-w-0">
+        <p className="font-medium text-sm text-ink-900">{label}</p>
+        {hint && <p className="text-xs text-ink-400 mt-0.5">{hint}</p>}
+      </div>
+      <ToggleSwitch checked={checked} onChange={onChange} />
+    </div>
+  );
+}
+
+// Static reference card for the shortcuts POS doesn't actually bind yet —
+// listed here so the UI is ready for when they're implemented. Opened via
+// "View shortcuts" inside POSSettingsModal's shortcuts section.
+const KEYBOARD_SHORTCUTS = [
+  { keys: "F2", actionKey: "pos.shortcutFocusSearch" },
+  { keys: "F4", actionKey: "pos.shortcutOpenPayment" },
+  { keys: "F6", actionKey: "pos.shortcutHoldSale" },
+  { keys: "F7", actionKey: "pos.shortcutRecallHeld" },
+  { keys: "F8", actionKey: "pos.shortcutQuickAddCustomer" },
+  { keys: "F9", actionKey: "pos.shortcutPrintLastReceipt" },
+  { keys: "Esc", actionKey: "pos.shortcutClearCart" },
+  { keys: "Ctrl + ArrowUp", actionKey: "pos.shortcutIncreaseQty" },
+  { keys: "Ctrl + ArrowDown", actionKey: "pos.shortcutDecreaseQty" },
+  { keys: "Ctrl + Delete", actionKey: "pos.shortcutRemoveItem" },
+  { keys: "Shift + ?", actionKey: "pos.shortcutShowHelp" },
+];
+
+function KeyboardShortcutsModal({ open, onClose }) {
+  const { t } = useTranslation();
+  return (
+    <Modal open={open} onClose={onClose} title={t("pos.shortcutsModalTitle")} size="lg">
+      <p className="text-sm text-ink-400 mb-4">{t("pos.shortcutsModalHint")}</p>
+      <div className="divide-y divide-surface-100">
+        <div className="flex justify-between pb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+          <span>{t("pos.shortcutColumnShortcut")}</span>
+          <span>{t("pos.shortcutColumnAction")}</span>
+        </div>
+        {KEYBOARD_SHORTCUTS.map((s) => (
+          <div key={s.keys} className="flex items-center justify-between py-2.5 gap-4">
+            <code className="font-figures text-xs bg-ink-900 text-white rounded-md px-2 py-1 shrink-0">{s.keys}</code>
+            <span className="text-sm text-ink-700 text-right">{t(s.actionKey)}</span>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+// The full POS Settings panel opened from the gear icon in the header.
+// Everything except the invoice-format/paper-width fields is cosmetic for
+// now — see DEFAULT_POS_SETTINGS above — but is still persisted so it
+// doesn't reset every time the modal is reopened. Hand-rolled rather than
+// built on the shared Modal component because the gradient hero header and
+// scrolling body + sticky footer don't fit Modal's simpler title-bar shape.
+function POSSettingsModal({ open, onClose, receiptWidthMm, onReceiptWidthChange }) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(getStoredPOSSettings);
+  const [invoiceFormat, setInvoiceFormat] = useState(getStoredInvoiceFormat);
+  const [widthSelected, setWidthSelected] = useState(receiptWidthMm);
+  const [customWidth, setCustomWidth] = useState("");
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useEffect(() => {
+    function handleEsc(e) { if (e.key === "Escape") onClose?.(); }
+    if (open) document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft(getStoredPOSSettings());
+    setInvoiceFormat(getStoredInvoiceFormat());
+    const isPreset = RECEIPT_WIDTH_PRESETS_MM.includes(receiptWidthMm);
+    setWidthSelected(isPreset ? receiptWidthMm : "custom");
+    setCustomWidth(isPreset ? "" : String(receiptWidthMm));
+  }, [open, receiptWidthMm]);
+
+  if (!open) return null;
+
+  const effectiveWidth = widthSelected === "custom" ? Number(customWidth) : widthSelected;
+  const widthValid = isValidReceiptWidthMm(effectiveWidth);
+  const canSubmit = invoiceFormat !== "thermal" || widthValid;
+
+  function toggle(key) {
+    setDraft((d) => ({ ...d, [key]: !d[key] }));
+  }
+  function setField(key, value) {
+    setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  function handleSubmit() {
+    if (!canSubmit) return;
+    localStorage.setItem(POS_SETTINGS_STORAGE_KEY, JSON.stringify(draft));
+    localStorage.setItem(INVOICE_FORMAT_STORAGE_KEY, invoiceFormat);
+    if (invoiceFormat === "thermal") {
+      localStorage.setItem(RECEIPT_WIDTH_STORAGE_KEY, String(effectiveWidth));
+      onReceiptWidthChange(effectiveWidth);
+    }
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+      <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} aria-hidden="true" />
+
+      <div role="dialog" aria-modal="true" className="relative w-full max-w-2xl max-h-full bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        {/* Gradient hero header */}
+        <div className="shrink-0 relative bg-gradient-to-r from-brand-700 to-brand-500 text-white px-6 py-5">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-white/90 hover:bg-white/10"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+          <h3 className="font-display font-semibold text-xl">{t("pos.settingsTitle")}</h3>
+          <p className="text-sm text-white/80 mt-1">{t("pos.settingsSubtitle")}</p>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <SettingsSection icon={Zap} label={t("pos.sectionBehavior")}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <SettingToggle
+                label={t("pos.quickAddCustomerLabel")} hint={t("pos.quickAddCustomerHint")}
+                checked={draft.quickAddCustomer} onChange={() => toggle("quickAddCustomer")}
+              />
+              <SettingToggle
+                label={t("pos.customerPurchaseHistoryLabel")} hint={t("pos.customerPurchaseHistoryHint")}
+                checked={draft.customerPurchaseHistory} onChange={() => toggle("customerPurchaseHistory")}
+              />
+              <SettingToggle
+                label={t("pos.barcodeScanningSoundLabel")} hint={t("pos.barcodeScanningSoundHint")}
+                checked={draft.barcodeScanningSound} onChange={() => toggle("barcodeScanningSound")}
+              />
+              <SettingToggle
+                label={t("pos.enableHoldSalesLabel")} hint={t("pos.enableHoldSalesHint")}
+                checked={draft.enableHoldSales} onChange={() => toggle("enableHoldSales")}
+              />
+              <SettingToggle
+                label={t("pos.enableCustomerPointsLabel")} hint={t("pos.enableCustomerPointsHint")}
+                checked={draft.enableCustomerPoints} onChange={() => toggle("enableCustomerPoints")}
+              />
+              <SettingToggle
+                label={t("pos.allowOversellingLabel")} hint={t("pos.allowOversellingHint")}
+                checked={draft.allowOverselling} onChange={() => toggle("allowOverselling")}
+              />
+            </div>
+            <SettingToggle
+              label={t("pos.printInvoiceAutomaticallyLabel")} hint={t("pos.printInvoiceAutomaticallyHint")}
+              checked={draft.printInvoiceAutomatically} onChange={() => toggle("printInvoiceAutomatically")}
+            />
+          </SettingsSection>
+
+          <SettingsSection icon={Eye} label={t("pos.sectionDisplay")}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <SettingToggle
+                label={t("pos.showProductImagesLabel")} hint={t("pos.showProductImagesHint")}
+                checked={draft.showProductImages} onChange={() => toggle("showProductImages")}
+              />
+              <SettingToggle
+                label={t("pos.showStockQuantityLabel")} hint={t("pos.showStockQuantityHint")}
+                checked={draft.showStockQuantity} onChange={() => toggle("showStockQuantity")}
+              />
+              <SettingToggle
+                label={t("pos.showCategoriesLabel")} hint={t("pos.showCategoriesHint")}
+                checked={draft.showCategories} onChange={() => toggle("showCategories")}
+              />
+              <SettingToggle
+                label={t("pos.showBrandsLabel")} hint={t("pos.showBrandsHint")}
+                checked={draft.showBrands} onChange={() => toggle("showBrands")}
+              />
+            </div>
+            <label className="block">
+              <span className="block text-sm font-medium text-ink-700 mb-1">{t("pos.itemsPerPageLabel")} *</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.itemsPerPage}
+                onChange={(e) => setField("itemsPerPage", e.target.value)}
+                className="input font-figures"
+              />
+            </label>
+          </SettingsSection>
+
+          <SettingsSection icon={CreditCard} label={t("pos.sectionCashDrawer")}>
+            <p className="text-xs text-ink-500 bg-brand-50 border border-brand-100 rounded-lg p-3">
+              {t("pos.cashDrawerHint")}
+            </p>
+            <SettingToggle
+              label={t("pos.openCashDrawerLabel")} hint={t("pos.openCashDrawerHint")}
+              checked={draft.openCashDrawerOnCashPayment} onChange={() => toggle("openCashDrawerOnCashPayment")}
+            />
+            <label className="block">
+              <span className="block text-sm font-medium text-ink-700 mb-1">{t("pos.receiptPrinterNameLabel")}</span>
+              <input
+                value={draft.receiptPrinterName}
+                onChange={(e) => setField("receiptPrinterName", e.target.value)}
+                placeholder={t("pos.receiptPrinterNamePlaceholder")}
+                className="input"
+              />
+              <span className="block text-xs text-ink-400 mt-1">{t("pos.receiptPrinterNameHint")}</span>
+            </label>
+          </SettingsSection>
+
+          <SettingsSection icon={ReceiptIcon} label={t("pos.sectionReceipt")}>
+            <span className="block text-sm font-medium text-ink-700 mb-1">{t("pos.invoiceFormatLabel")}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setInvoiceFormat("thermal")}
+                className={`px-3 py-2 rounded-lg border text-sm font-medium ${
+                  invoiceFormat === "thermal" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-ink-700 hover:bg-surface-50"
+                }`}
+              >
+                {t("pos.invoiceFormatThermal")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInvoiceFormat("a4")}
+                className={`px-3 py-2 rounded-lg border text-sm font-medium ${
+                  invoiceFormat === "a4" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-ink-700 hover:bg-surface-50"
+                }`}
+              >
+                {t("pos.invoiceFormatA4")}
+              </button>
+            </div>
+            <p className="text-xs text-ink-400 mt-1">{t("pos.invoiceFormatHint")}</p>
+
+            {invoiceFormat === "thermal" && (
+              <div className="mt-3 pt-3 border-t border-surface-100 space-y-2">
+                <span className="block text-sm font-medium text-ink-700">{t("pos.receiptSettingsTitle")}</span>
+                {RECEIPT_WIDTH_PRESETS_MM.map((mm) => (
+                  <label key={mm} className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="pos-settings-receipt-width"
+                      checked={widthSelected === mm}
+                      onChange={() => setWidthSelected(mm)}
+                    />
+                    {t(mm === 80 ? "pos.receiptWidth80" : "pos.receiptWidth58")}
+                  </label>
+                ))}
+                <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pos-settings-receipt-width"
+                    checked={widthSelected === "custom"}
+                    onChange={() => setWidthSelected("custom")}
+                  />
+                  {t("pos.receiptWidthCustom")}
+                  <input
+                    type="number"
+                    min={RECEIPT_WIDTH_MIN_MM}
+                    max={RECEIPT_WIDTH_MAX_MM}
+                    value={customWidth}
+                    onFocus={() => setWidthSelected("custom")}
+                    onChange={(e) => { setWidthSelected("custom"); setCustomWidth(e.target.value); }}
+                    placeholder="mm"
+                    className="input !w-20 !py-1 text-sm font-figures"
+                  />
+                </label>
+                {widthSelected === "custom" && !widthValid && (
+                  <p className="text-xs text-danger-600">
+                    {t("pos.receiptWidthRange", { min: RECEIPT_WIDTH_MIN_MM, max: RECEIPT_WIDTH_MAX_MM })}
+                  </p>
+                )}
+              </div>
+            )}
+          </SettingsSection>
+
+          <SettingsSection icon={Keyboard} label={t("pos.sectionShortcuts")}>
+            <p className="text-xs text-ink-500 bg-brand-50 border border-brand-100 rounded-lg p-3">
+              {t("pos.shortcutsHint")}
+            </p>
+            <SettingToggle
+              label={t("pos.enableShortcutsLabel")} hint={t("pos.enableShortcutsHint")}
+              checked={draft.enableKeyboardShortcuts} onChange={() => toggle("enableKeyboardShortcuts")}
+            />
+            <button
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+              className="flex items-center gap-1.5 text-sm text-brand-700 hover:underline"
+            >
+              <ListIcon size={14} /> {t("pos.viewShortcuts")}
+            </button>
+          </SettingsSection>
+        </div>
+
+        {/* Sticky footer */}
+        <div className="shrink-0 px-6 py-4 border-t border-surface-200 flex justify-end gap-2 bg-surface-50">
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={!canSubmit}>
+            {t("common.submit")}
+          </Button>
+        </div>
+      </div>
+
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

@@ -41,11 +41,18 @@ class SaleSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(
         source="customer.name", read_only=True, default=None)
     branch_code = serializers.CharField(source="branch.code", read_only=True)
+    # Needed by the POS receipt printout (name/address/phone in the header)
+    # so it doesn't have to rely on the cashier's own branch_access list,
+    # which won't always include every branch a sale could belong to.
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+    branch_address = serializers.CharField(source="branch.address", read_only=True)
+    branch_phone = serializers.CharField(source="branch.phone", read_only=True)
 
     class Meta:
         model = Sale
         fields = [
-            "id", "branch", "branch_code", "terminal", "customer", "customer_name",
+            "id", "branch", "branch_code", "branch_name", "branch_address",
+            "branch_phone", "terminal", "customer", "customer_name",
             "sale_number", "status", "subtotal", "discount_amount",
             "tax_amount", "total_amount", "notes", "sold_at", "created_at",
             "voided_at", "void_reason", "items", "payments",

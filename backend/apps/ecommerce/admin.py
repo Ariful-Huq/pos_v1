@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment
+from .models import Address, Cart, CartItem, CustomerAccount, HomeBanner, Order, OrderItem, Payment, Review, WishlistItem
 
 
 @admin.register(CustomerAccount)
@@ -57,3 +57,19 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "fulfillment_branch")
     search_fields = ("order_number", "guest_email", "guest_phone")
     inlines = [OrderItemInline, PaymentInline]
+
+
+@admin.register(WishlistItem)
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ("customer", "product", "variant", "created_at")
+    search_fields = ("customer__email", "product__name")
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    # is_visible in list_editable — the moderation safety net (§ models.py
+    # docstring): hide a review inline from the list without opening it.
+    list_display = ("product", "customer", "rating", "is_visible", "created_at")
+    list_editable = ("is_visible",)
+    list_filter = ("rating", "is_visible")
+    search_fields = ("product__name", "customer__email", "comment")

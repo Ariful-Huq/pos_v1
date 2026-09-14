@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { User, LogOut, Package } from "lucide-react";
+import { User, LogOut, Package, Heart } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useLanguage } from "./LanguageProvider";
 
@@ -68,6 +68,13 @@ export default function AccountMenu() {
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             <Package className="h-4 w-4" /> {t("account_my_orders")}
+          </Link>
+          <Link
+            href="/account/wishlist"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <Heart className="h-4 w-4" /> {t("wishlist_heading")}
           </Link>
           <button
             onClick={() => {

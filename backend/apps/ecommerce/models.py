@@ -14,6 +14,7 @@ import uuid
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from apps.core.models import BaseModel
@@ -254,3 +255,60 @@ class HomeBanner(BaseModel):
 
     def __str__(self):
         return self.title
+
+
+class WishlistItem(BaseModel):
+    """Deliberately account-only — no guest/session-keyed wishlist the way
+    Cart has one. A wishlist is inherently about identity across visits
+    ('save this for later'), which a guest session can't meaningfully
+    provide once the browser closes."""
+    customer = models.ForeignKey(
+        CustomerAccount, on_delete=models.CASCADE, related_name="wishlist_items"
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="+")
+    variant = models.ForeignKey(
+        ProductVariant, on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "product", "variant"], name="ecommerce_wishlist_unique_item"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.customer.email} — {self.product.name}"
+
+
+class Review(BaseModel):
+    """Verified-purchase only (enforced in services.py, not here — see
+    can_review_product()) — a customer can only review a product they have
+    at least one OrderItem for, on an order that's actually
+    confirmed/fulfilled. is_visible is the moderation safety net: reviews
+    publish immediately (verified-purchase is judged sufficient spam
+    protection on its own — a pre-approval queue would just suppress real
+    reviews for no real safety benefit), but staff can hide one after the
+    fact via Django admin without deleting it outright."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="reviews")
+    customer = models.ForeignKey(
+        CustomerAccount, on_delete=models.CASCADE, related_name="reviews"
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    comment = models.TextField(blank=True)
+    is_visible = models.BooleanField(
+        default=True,
+        help_text="Moderation safety net — uncheck to hide without deleting.")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "product"], name="ecommerce_review_one_per_customer_product"
+            )
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.product.name} — {self.rating}★ by {self.customer.email}"

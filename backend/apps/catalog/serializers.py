@@ -4,6 +4,7 @@
 # Original content preserved as-is; new serializers and fields are additive,
 # marked below.
 
+from django.db.models import Avg
 from rest_framework import serializers
 from apps.tenants.models import Organization
 from .models import (
@@ -120,11 +121,25 @@ class ProductPublicSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(
         source="gallery_images", many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
+    # Real aggregates from apps.ecommerce.Review, accessed via the reverse
+    # relation only (obj.reviews) — NOT an import. catalog (layer 4) must
+    # never import from ecommerce (layer 5); this respects that rule while
+    # still surfacing real data, same pattern as Product.stock_movements
+    # coming from apps.inventory without catalog importing it.
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = [
             "id", "slug", "sku", "name", "description", "image",
             "category", "category_name", "selling_price", "product_type",
-            "images", "variants",
+            "images", "variants", "average_rating", "review_count",
         ]
+
+    def get_average_rating(self, obj):
+        agg = obj.reviews.filter(is_visible=True).aggregate(avg=Avg("rating"))
+        return round(agg["avg"], 1) if agg["avg"] is not None else None
+
+    def get_review_count(self, obj):
+        return obj.reviews.filter(is_visible=True).count()

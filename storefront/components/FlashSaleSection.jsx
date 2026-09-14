@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart, Zap } from "lucide-react";
+import { ArrowRight, ShoppingCart, Zap, Heart } from "lucide-react";
 import { api } from "../lib/api";
 import { useLanguage } from "./LanguageProvider";
+import { useAuth } from "./AuthProvider";
+import { useWishlist } from "./WishlistProvider";
 
 /*
  * Cosmetic section, matching the reference screenshot's "Weekend Flash
@@ -49,7 +51,11 @@ function pad(n) {
 
 function FlashSaleCard({ product, discountPercent, t }) {
   const [status, setStatus] = useState("idle"); // idle | adding | added | error
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isWishlisted, toggle } = useWishlist();
+  const [wishlistBusy, setWishlistBusy] = useState(false);
   const isVariant = product.product_type === "variant";
+  const wishlisted = isWishlisted(product.id);
   const fakeOriginalPrice = Math.round((product.selling_price / (1 - discountPercent / 100)) * 100) / 100;
 
   async function handleQuickAdd(e) {
@@ -64,16 +70,45 @@ function FlashSaleCard({ product, discountPercent, t }) {
     }
   }
 
+  async function handleToggleWishlist(e) {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+    setWishlistBusy(true);
+    try {
+      await toggle(product);
+    } finally {
+      setWishlistBusy(false);
+    }
+  }
+
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-4 hover:shadow-md dark:hover:shadow-none dark:hover:border-gray-700 transition">
       <Link href={`/products/${product.slug}`} className="block group">
-        <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-md mb-3 flex items-center justify-center text-gray-400 text-sm overflow-hidden">
+        <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-md mb-3 flex items-center justify-center text-gray-400 text-sm overflow-hidden">
           {product.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-md" />
           ) : (
             t("no_image")
           )}
+
+          {/* Wishlist button: shown on hover/focus, same as ProductCard */}
+          <button
+            onClick={handleToggleWishlist}
+            disabled={wishlistBusy}
+            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 opacity-0 group-hover:opacity-100 focus:opacity-100 transition shadow hover:text-green-700 focus:text-green-700 disabled:opacity-50"
+            aria-label="Toggle wishlist"
+          >
+            <Heart
+              className="h-4 w-4"
+              fill={wishlisted ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+            />
+          </button>
         </div>
         <h3 className="font-medium text-sm mb-1 text-gray-900 dark:text-gray-100 truncate">{product.name}</h3>
       </Link>

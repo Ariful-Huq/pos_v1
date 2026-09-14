@@ -13,6 +13,8 @@ import { LanguageProvider } from "../components/LanguageProvider";
 import SearchBar from "../components/SearchBar";
 import T from "../components/T";
 import ThemeToggle from "../components/ThemeToggle";
+import WishlistBadge from "../components/WishlistBadge";
+import { WishlistProvider } from "../components/WishlistProvider";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/storefront";
 
@@ -38,6 +40,12 @@ export async function generateMetadata() {
   return {
     title: org?.name || "PonnoSomver",
     description: "pos_v1 storefront",
+    // Dynamic favicon from the real uploaded Organization.logo, same
+    // source as the header/footer/invoice branding — no separate
+    // "favicon setting" to maintain. Falls back to app/icon.png (Next.js's
+    // auto-detected static icon convention) when no logo is set yet,
+    // rather than a broken/missing tab icon.
+    icons: org?.logo ? { icon: org.logo } : undefined,
   };
 }
 
@@ -65,6 +73,7 @@ export default async function RootLayout({ children }) {
 
         <LanguageProvider>
           <AuthProvider>
+            <WishlistProvider>
             <AnnouncementBar />
 
             <header className="border-b border-gray-200 dark:border-gray-800">
@@ -72,7 +81,7 @@ export default async function RootLayout({ children }) {
                 <Link href="/" className="flex items-center gap-2 shrink-0">
                   {org?.logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={org.logo} alt={org.name} className="h-8 w-8 object-contain rounded" />
+                    <img src={org.logo} alt={org.name} className="h-10 w-10 object-contain rounded" />
                   ) : null}
                   <span className="font-heading text-xl font-semibold text-brand-700 dark:text-brand-500">
                     {org?.name || <T id="site_name" />}
@@ -89,6 +98,7 @@ export default async function RootLayout({ children }) {
                   <LanguageSwitcher />
                   <ThemeToggle />
                   <AccountMenu />
+                  <WishlistBadge />
                   <CartBadge />
                 </div>
               </div>
@@ -103,6 +113,7 @@ export default async function RootLayout({ children }) {
             <Footer org={org} />
 
             <AuthModal />
+            </WishlistProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -38,11 +38,12 @@ from apps.catalog.serializers import ProductPublicSerializer
 from apps.tenants.models import Branch, Organization
 
 from . import services
-from .models import Address, Cart, CustomerAccount, HomeBanner, Order
+from .models import Address, Cart, CustomerAccount, HomeBanner, Order, WishlistItem
 from .serializers import (
     AddressSerializer, CartSerializer, CategoryPublicSerializer, CheckoutSerializer,
     CustomerAccountSerializer, CustomerLoginSerializer, CustomerRegisterSerializer,
     HomeBannerPublicSerializer, OrderSerializer, OrderTrackSerializer, OrganizationPublicSerializer,
+    ReviewCreateSerializer, ReviewSerializer, WishlistItemSerializer,
 )
 
 SIGNING_SALT = "ecommerce.customer-auth"
@@ -393,3 +394,81 @@ class OrderTrackView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(OrderSerializer(order, context={"request": request}).data)
+
+
+# ---------------------------------------------------------------------------
+# Wishlist — account-only (no guest wishlist, see WishlistItem's docstring)
+# ---------------------------------------------------------------------------
+class WishlistView(APIView):
+    """GET lists the signed-in customer's wishlist. POST toggles a single
+    product (add if absent, remove if present) — one endpoint matching how
+    the heart button actually behaves in the UI, not separate add/remove
+    routes."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        items = WishlistItem.objects.filter(
+            customer=request.user
+        ).select_related("product").order_by("-created_at")
+        return Response(WishlistItemSerializer(items, many=True, context={"request": request}).data)
+
+    def post(self, request):
+        product = get_object_or_404(Product, id=request.data.get("product"), is_published_online=True)
+        variant_id = request.data.get("variant")
+        variant = get_object_or_404(product.variants, id=variant_id) if variant_id else None
+        item, was_added = services.toggle_wishlist_item(request.user, product, variant)
+        return Response({"wishlisted": was_added})
+
+
+# ---------------------------------------------------------------------------
+# Reviews — verified-purchase only, published immediately (see Review's
+# docstring in models.py)
+# ---------------------------------------------------------------------------
+class ReviewListCreateView(APIView):
+    """GET is public — anyone can read reviews. POST requires a signed-in
+    customer who has actually purchased the product (services.
+    can_review_product()) and hasn't already reviewed it."""
+    authentication_classes = [CustomerTokenAuthentication]
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, slug):
+        product = get_object_or_404(Product, slug=slug, is_published_online=True)
+        reviews = product.reviews.filter(is_visible=True).select_related("customer")
+        customer = request.user if isinstance(getattr(request, "user", None), CustomerAccount) else None
+        payload = {
+            "results": ReviewSerializer(reviews, many=True).data,
+            "average_rating": None,
+            "review_count": reviews.count(),
+            "can_review": False,
+            "already_reviewed": False,
+        }
+        if reviews:
+            from django.db.models import Avg
+            payload["average_rating"] = round(
+                reviews.aggregate(avg=Avg("rating"))["avg"], 1
+            )
+        if customer:
+            payload["already_reviewed"] = services.has_reviewed(customer, product)
+            payload["can_review"] = (
+                not payload["already_reviewed"] and services.can_review_product(customer, product)
+            )
+        return Response(payload)
+
+    def post(self, request, slug):
+        if not isinstance(getattr(request, "user", None), CustomerAccount):
+            return Response({"detail": "Sign in to leave a review."}, status=status.HTTP_401_UNAUTHORIZED)
+        product = get_object_or_404(Product, slug=slug, is_published_online=True)
+
+        if services.has_reviewed(request.user, product):
+            return Response({"detail": "You've already reviewed this product."}, status=status.HTTP_400_BAD_REQUEST)
+        if not services.can_review_product(request.user, product):
+            return Response(
+                {"detail": "Only customers who have purchased and received this product can review it."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = ReviewCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save(customer=request.user, product=product)
+        return Response(ReviewSerializer(review).data, status=status.HTTP_201_CREATED)

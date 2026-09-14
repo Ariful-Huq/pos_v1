@@ -12,10 +12,13 @@ urlpatterns = [
     path("products/", views.ProductListView.as_view(), name="product-list"),
     path("products/<slug:slug>/",
          views.ProductDetailView.as_view(), name="product-detail"),
+    path("products/<slug:slug>/reviews/",
+         views.ReviewListCreateView.as_view(), name="product-reviews"),
     path("categories/", views.CategoryListView.as_view(), name="category-list"),
     path("home-banners/", views.HomeBannerListView.as_view(), name="home-banner-list"),
     path("shipping-config/", views.ShippingConfigView.as_view(), name="shipping-config"),
     path("organization/", views.OrganizationPublicView.as_view(), name="organization"),
+    path("wishlist/", views.WishlistView.as_view(), name="wishlist"),
 
     path("cart/", views.CartView.as_view(), name="cart"),
     path("cart/items/<uuid:item_id>/",

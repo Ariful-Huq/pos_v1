@@ -1,5 +1,6 @@
 # backend/apps/tenants/models.py
 
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from apps.core.models import BaseModel
 
@@ -11,10 +12,18 @@ class Organization(BaseModel):
     legal_name = models.CharField(max_length=200, blank=True)
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=30, blank=True)
-    # NEW — used both in the admin (Settings > Business Profile) and
-    # publicly by the storefront (header/footer/invoice branding). Same
-    # upload_to convention as catalog.Product.image.
-    logo = models.ImageField(upload_to="organization/", null=True, blank=True)
+    # FileField, not ImageField — deliberately. ImageField validates via
+    # Pillow, which cannot decode SVG at all (it's vector/XML, not a raster
+    # format), so any SVG logo would be rejected outright. Logos are
+    # commonly vector art, so validate by extension instead. Safe to allow
+    # SVG here specifically because it's only ever rendered via <img> tags
+    # in the storefront/admin — browsers don't execute embedded scripts
+    # inside an <img src="...svg">, unlike <object>/inline embedding.
+    logo = models.FileField(
+        upload_to="organization/", null=True, blank=True,
+        validators=[FileExtensionValidator(
+            allowed_extensions=["png", "jpg", "jpeg", "webp", "svg"])],
+    )
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

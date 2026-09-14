@@ -1,6 +1,5 @@
 # backend/apps/purchases/views.py
 
-import uuid
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -48,11 +47,30 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return "purchases.create"
 
     def perform_create(self, serializer):
+        """
+        branch: the frontend now always sends this explicitly (a
+        warehouse/branch selector on the PO form) — the active-branch
+        fallback stays only for API callers that don't supply one.
+
+        reference_number: if the client supplied one, it's a supplier's
+        own reference — used as-is, is_supplier_reference=True. If not,
+        we generate a gapless sequential number for that branch via
+        services.generate_po_number() — NOT a random UUID suffix, which
+        is what this replaces. Random suffixes give no audit trail and
+        no way to tell "how many POs has this branch raised".
+        """
         extra = {}
-        if not serializer.validated_data.get("branch"):
-            extra["branch"] = get_active_branch(self.request)
-        if not serializer.validated_data.get("reference_number"):
-            extra["reference_number"] = f"PO-{uuid.uuid4().hex[:8].upper()}"
+        branch = serializer.validated_data.get("branch") or get_active_branch(self.request)
+        extra["branch"] = branch
+
+        supplied_reference = serializer.validated_data.get("reference_number")
+        if supplied_reference:
+            extra["reference_number"] = supplied_reference
+            extra["is_supplier_reference"] = True
+        else:
+            extra["reference_number"] = services.generate_po_number(branch)
+            extra["is_supplier_reference"] = False
+
         serializer.save(**extra)
 
     @action(detail=True, methods=["post"], url_path="items/(?P<item_id>[^/.]+)/receive")

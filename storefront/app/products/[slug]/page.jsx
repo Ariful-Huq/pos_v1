@@ -7,6 +7,7 @@ import { api } from "../../../lib/api";
 import { useLanguage } from "../../../components/LanguageProvider";
 import ProductGallery from "../../../components/ProductGallery";
 import ProductCard from "../../../components/ProductCard";
+import ProductReviews from "../../../components/ProductReviews";
 
 function ChevronIcon() {
   return (
@@ -130,8 +131,8 @@ export default function ProductDetailPage({ params }) {
   const categoryObj =
     categoryRaw && typeof categoryRaw === "object" ? categoryRaw : categories.find((c) => c.id === categoryRaw);
 
-  // No reviews system exists in the backend yet — count is honestly 0
-  // until that's built, rather than a fake number.
+  // Real now — from apps.ecommerce.Review via ProductPublicSerializer's
+  // average_rating/review_count fields.
   const reviewCount = product.review_count ?? 0;
 
   const tabs = [
@@ -359,9 +360,7 @@ export default function ProductDetailPage({ params }) {
               <p className="text-gray-400 dark:text-gray-500 text-sm italic">{t("specification_note")}</p>
             ))}
 
-          {activeTab === "reviews" && (
-            <p className="text-gray-400 dark:text-gray-500 text-sm italic">{t("reviews_coming_soon")}</p>
-          )}
+          {activeTab === "reviews" && <ProductReviews slug={slug} />}
         </div>
       </div>
 

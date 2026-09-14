@@ -16,7 +16,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.inventory.services import record_movement  # TODO: confirm signature
-from .models import Cart, CartItem, Order, OrderItem, Payment
+from .models import Cart, CartItem, Order, OrderItem, Payment, Review, WishlistItem
 from .payments import get_provider
 
 
@@ -198,3 +198,42 @@ def cancel_order(order: Order):
     order.status = "cancelled"
     order.save(update_fields=["status"])
     return order
+
+
+# ---------------------------------------------------------------------------
+# Wishlist — account-only (see WishlistItem's docstring in models.py)
+# ---------------------------------------------------------------------------
+def toggle_wishlist_item(customer, product, variant=None):
+    """Returns (item_or_None, was_added). If the item already existed it's
+    removed (item_or_None is None, was_added is False) — a single endpoint
+    doing add-or-remove, matching how the storefront's heart button
+    actually behaves (click = toggle, not separate add/remove UI)."""
+    existing = WishlistItem.objects.filter(
+        customer=customer, product=product, variant=variant
+    ).first()
+    if existing:
+        existing.delete()
+        return None, False
+    item = WishlistItem.objects.create(customer=customer, product=product, variant=variant)
+    return item, True
+
+
+# ---------------------------------------------------------------------------
+# Reviews — verified-purchase only, published immediately (see Review's
+# docstring in models.py for the reasoning)
+# ---------------------------------------------------------------------------
+def can_review_product(customer, product) -> bool:
+    """Purchase verification: at least one OrderItem for this product, on
+    an order that's actually confirmed or fulfilled for this customer —
+    not merely added to a cart, not on a cancelled/refunded order. Doesn't
+    check for an existing review; combine with has_reviewed() for the full
+    eligibility picture (see ReviewListCreateView)."""
+    return OrderItem.objects.filter(
+        product=product,
+        order__customer=customer,
+        order__status__in=["confirmed", "fulfilled"],
+    ).exists()
+
+
+def has_reviewed(customer, product) -> bool:
+    return Review.objects.filter(customer=customer, product=product).exists()
