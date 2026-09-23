@@ -1,6 +1,7 @@
 # backend/apps/sales/serializers.py
 
 from rest_framework import serializers
+from apps.tenants.models import Organization
 from .models import Sale, SaleItem, Payment, Customer
 
 
@@ -30,9 +31,29 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    # Customer has no unique_together involving organization (unlike
+    # Product), so a plain required=False field + view-side
+    # perform_create() default is enough — see CategorySerializer for the
+    # same pattern and why Product needs the heavier HiddenField instead.
+    organization = serializers.PrimaryKeyRelatedField(
+        queryset=Organization.objects.all(), required=False
+    )
+
     class Meta:
         model = Customer
-        fields = ["id", "name", "phone", "loyalty_points", "is_active"]
+        fields = ["id", "organization", "name",
+                  "phone", "loyalty_points", "is_active"]
+
+
+class CustomerSaleHistorySerializer(serializers.ModelSerializer):
+    """Slim, read-only view of a Sale for the POS 'purchase history' panel
+    on a selected customer — just enough to list past visits, not the
+    full line-item/payment detail SaleSerializer carries."""
+
+    class Meta:
+        model = Sale
+        fields = ["id", "sale_number", "status",
+                  "total_amount", "sold_at", "created_at"]
 
 
 class SaleSerializer(serializers.ModelSerializer):

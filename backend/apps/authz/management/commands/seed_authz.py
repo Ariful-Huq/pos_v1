@@ -19,6 +19,8 @@ FEATURES = [
     ("staff.manage", "staff", "Manage staff"),
     ("catalog.view", "catalog", "View products/catalog"),
     ("catalog.manage", "catalog", "Create/edit products"),
+    ("customers.view", "customers", "View customers"),
+    ("customers.manage", "customers", "Create/edit customers"),
     ("settings.manage", "settings", "Manage business profile and branches"),
 ]
 
@@ -30,10 +32,14 @@ ROLES = {
         "purchases.view", "purchases.create",
         "expenses.view", "expenses.create",
         "reports.view_financial", "catalog.view", "catalog.manage",
+        "customers.view", "customers.manage",
     ],
     "cashier": [
         "sales.view", "sales.create", "inventory.view",
         "catalog.view", "catalog.manage",
+        # Cashiers need to add a walk-in customer's name/phone on the fly
+        # at the register (the POS quick-add flow), not just look them up.
+        "customers.view", "customers.manage",
     ],
 }
 

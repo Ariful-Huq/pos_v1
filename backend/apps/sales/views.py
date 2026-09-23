@@ -3,11 +3,12 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Q
 from apps.core.pagination import StandardResultsSetPagination
-from apps.tenants.models import Branch
+from apps.tenants.models import Branch, Organization
 from apps.catalog.models import Product
-from .models import Sale, SaleItem
-from .serializers import SaleSerializer
+from .models import Sale, SaleItem, Customer
+from .serializers import SaleSerializer, CustomerSerializer, CustomerSaleHistorySerializer
 from . import services
 
 # Maps DRF viewset action names to the feature code each one requires.
@@ -33,6 +34,16 @@ def get_active_branch(request):
         if branch:
             return branch
     return Branch.objects.first()
+
+
+def resolve_organization(request):
+    """Same pattern as apps.catalog.views.resolve_organization — the
+    organization a newly-created Customer belongs to is inferred from the
+    active branch, never taken from the client."""
+    branch = get_active_branch(request)
+    if branch:
+        return branch.organization
+    return Organization.objects.first()
 
 
 class SaleViewSet(viewsets.ModelViewSet):
@@ -156,3 +167,86 @@ class SaleViewSet(viewsets.ModelViewSet):
 
         sale.refresh_from_db()
         return Response(SaleSerializer(sale).data)
+
+    @action(detail=True, methods=["post"], url_path="customer")
+    def set_customer(self, request, pk=None):
+        """POST /api/sales/sales/{id}/customer/  { customer: <id> | null }
+
+        Attaches (or clears, with customer: null) the customer on a draft
+        sale. This is separate from create() because the POS starts a
+        draft sale immediately on screen-load — before a cashier has had
+        a chance to open the customer picker — so the customer is very
+        often chosen or changed after the sale already exists. Only
+        allowed while the sale is still a draft: once completed, the sale
+        has already been receipted (see sale_number / price snapshots in
+        the design doc) and shouldn't silently change who it was for.
+        """
+        sale = self.get_object()
+        if sale.status != "draft":
+            return Response(
+                {"detail": "Cannot change the customer on a sale that is not in draft status"},
+                status=400,
+            )
+
+        customer_id = request.data.get("customer")
+        if customer_id:
+            customer = Customer.objects.filter(id=customer_id).first()
+            if not customer:
+                return Response({"detail": "Customer not found"}, status=404)
+            sale.customer = customer
+        else:
+            sale.customer = None
+        sale.save(update_fields=["customer"])
+
+        sale.refresh_from_db()
+        return Response(SaleSerializer(sale).data)
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    """
+    /api/sales/customers/
+
+    A plain CRUD resource (unlike Sale) — Customer has no lifecycle of
+    its own. Kept lightweight to match the model's own docstring: this is
+    contact info + a loyalty-points counter, not a rewards engine.
+
+    NOTE: not yet filtered by organization, same as ProductViewSet and
+    SupplierViewSet — fine with a single test organization, revisit
+    before onboarding a second one.
+    """
+    queryset = Customer.objects.all().order_by("name")
+    serializer_class = CustomerSerializer
+    pagination_class = StandardResultsSetPagination
+
+    def get_required_feature(self, request, view):
+        if self.action == "sales":
+            return "sales.view"  # exposes sale history, not customer data
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return "customers.view"
+        return "customers.manage"
+
+    def get_queryset(self):
+        """Supports the POS customer picker's ?search= — matches name or
+        phone, case-insensitive, partial (mirrors ProductViewSet's
+        ?search= for the catalog picker)."""
+        qs = self.queryset
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(phone__icontains=search))
+        return qs
+
+    def perform_create(self, serializer):
+        if not serializer.validated_data.get("organization"):
+            serializer.save(organization=resolve_organization(self.request))
+        else:
+            serializer.save()
+
+    @action(detail=True, methods=["get"], url_path="sales")
+    def sales(self, request, pk=None):
+        """GET /api/sales/customers/{id}/sales/ — this customer's own
+        sale history for the POS 'purchase history' panel. Most recent
+        first; capped rather than paginated since this is a quick
+        lookup panel, not a full sales report (apps.reports covers that)."""
+        customer = self.get_object()
+        qs = customer.sales.exclude(status="draft").order_by("-created_at")[:50]
+        return Response(CustomerSaleHistorySerializer(qs, many=True).data)

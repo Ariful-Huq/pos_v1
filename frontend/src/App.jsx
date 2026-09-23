@@ -8,6 +8,7 @@ import Products from "./pages/products/Products";
 import SalesHistory from "./pages/sales/SalesHistory";
 import POS from "./pages/pos/POS";
 import Purchases from "./pages/purchases/Purchases";
+import Customers from "./pages/customers/Customers";
 import Inventory from "./pages/inventory/Inventory";
 import Expenses from "./pages/expenses/Expenses";
 import Staff from "./pages/staff/Staff";
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="products" element={<Products />} />
             <Route path="sales" element={<SalesHistory />} />
             <Route path="purchases" element={<Purchases />} />
+            <Route path="customers" element={<Customers />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="staff" element={<Staff />} />

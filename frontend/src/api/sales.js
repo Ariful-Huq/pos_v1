@@ -47,6 +47,13 @@ export async function voidSale(saleId, reason) {
   return data;
 }
 
+export async function setSaleCustomer(saleId, customerId) {
+  const { data } = await client.post(`/sales/sales/${saleId}/customer/`, {
+    customer: customerId,
+  });
+  return data;
+}
+
 export async function lookupProduct(code) {
   const { data } = await client.get("/catalog/products/lookup/", { params: { code } });
   return data;

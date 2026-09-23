@@ -27,3 +27,12 @@ export async function createSupplier(payload) {
   const { data } = await client.post("/purchases/suppliers/", payload);
   return data;
 }
+
+export async function updateSupplier(id, payload) {
+  const { data } = await client.patch(`/purchases/suppliers/${id}/`, payload);
+  return data;
+}
+
+export async function deleteSupplier(id) {
+  await client.delete(`/purchases/suppliers/${id}/`);
+}

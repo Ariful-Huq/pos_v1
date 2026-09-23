@@ -4,7 +4,7 @@ import {
   Scan, Plus, Trash2, CheckCircle2, PauseCircle, Clock, Search, PackageSearch,
   Loader2, Minus, ArrowLeft, Printer, Banknote, CreditCard, Smartphone, Wallet2, X,
   Languages, Settings as SettingsIcon, Maximize, Minimize, Home, RotateCcw, FileClock,
-  User as UserIcon, Lock as LockIcon, LogOut, Wifi, UserPlus, Undo2,
+  User as UserIcon, Lock as LockIcon, LogOut, Wifi, UserPlus, Undo2, History, UserCircle2,
   Zap, Eye, Keyboard, Receipt as ReceiptIcon, Check, List as ListIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -19,9 +19,10 @@ import { useAuth } from "../../context/AuthContext";
 import { setLanguage } from "../../i18n";
 import {
   createDraftSale, listHeldSales, addItem, removeItem,
-  updateItemQuantity, completeSale, lookupProduct,
+  updateItemQuantity, completeSale, lookupProduct, setSaleCustomer,
 } from "../../api/sales";
 import { listProducts, listCategories } from "../../api/catalog";
+import { listCustomers, createCustomer, getCustomer, getCustomerSales } from "../../api/customers";
 
 const CATALOG_PAGE_SIZE = 24;
 const QUICK_CASH_AMOUNTS = [50, 100, 500, 1000];
@@ -231,6 +232,41 @@ export default function POS() {
   function showHeaderNote(message) {
     setHeaderNote(message);
     setTimeout(() => setHeaderNote(""), 2500);
+  }
+
+  // Customer — picker/quick-add modal and, once a customer is attached to
+  // the sale, an optional history panel. Both are gated by the
+  // quickAddCustomer / customerPurchaseHistory / enableCustomerPoints POS
+  // settings (see POSSettingsModal) rather than always shown, since those
+  // toggles exist specifically to let a store turn this off.
+  const posSettings = getStoredPOSSettings();
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [customerHistoryOpen, setCustomerHistoryOpen] = useState(false);
+  // Full customer record (name/phone/loyalty_points) for whoever is
+  // currently attached to the sale — the sale object itself only carries
+  // customer_name (see SaleSerializer), not points, so this is fetched
+  // separately only when a customer is actually selected.
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  useEffect(() => {
+    if (!sale?.customer) {
+      setSelectedCustomer(null);
+      return;
+    }
+    if (selectedCustomer?.id === sale.customer) return;
+    let cancelled = false;
+    getCustomer(sale.customer)
+      .then((c) => { if (!cancelled) setSelectedCustomer(c); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sale?.customer]);
+
+  async function handleSelectCustomer(customer) {
+    const updated = await setSaleCustomer(sale.id, customer ? customer.id : null);
+    setSale(updated);
+    setSelectedCustomer(customer || null);
+    setCustomerPickerOpen(false);
   }
 
   const [scanValue, setScanValue] = useState("");
@@ -521,9 +557,20 @@ export default function POS() {
               </select>
             )}
 
-            <IconButton onClick={() => showHeaderNote(t("pos.customerComingSoon"))} title={t("pos.customerButton")}>
-              <UserPlus size={16} /> <span className="text-xs">{t("pos.walkIn")}</span>
+            <IconButton onClick={() => setCustomerPickerOpen(true)} title={t("pos.customerButton")}>
+              {selectedCustomer ? <UserCircle2 size={16} /> : <UserPlus size={16} />}
+              <span className="text-xs">
+                {selectedCustomer ? (selectedCustomer.name || selectedCustomer.phone || t("pos.walkIn")) : t("pos.walkIn")}
+                {posSettings.enableCustomerPoints && selectedCustomer &&
+                  ` · ${selectedCustomer.loyalty_points} ${t("pos.loyaltyPointsShort")}`}
+              </span>
             </IconButton>
+
+            {selectedCustomer && posSettings.customerPurchaseHistory && (
+              <IconButton onClick={() => setCustomerHistoryOpen(true)} title={t("pos.customerHistoryButton")}>
+                <History size={16} />
+              </IconButton>
+            )}
 
             <div className="h-6 w-px bg-surface-200" />
 
@@ -575,6 +622,18 @@ export default function POS() {
           onClose={() => setReceiptSettingsOpen(false)}
           receiptWidthMm={receiptWidthMm}
           onReceiptWidthChange={setReceiptWidthMm}
+        />
+        <CustomerPickerModal
+          open={customerPickerOpen}
+          onClose={() => setCustomerPickerOpen(false)}
+          onSelect={handleSelectCustomer}
+          allowQuickAdd={posSettings.quickAddCustomer}
+          showPoints={posSettings.enableCustomerPoints}
+        />
+        <CustomerHistoryModal
+          open={customerHistoryOpen}
+          onClose={() => setCustomerHistoryOpen(false)}
+          customer={selectedCustomer}
         />
       </div>
     );
@@ -1262,12 +1321,218 @@ function KeyboardShortcutsModal({ open, onClose }) {
   );
 }
 
+// Customer picker — opened from the header's customer button. Search an
+// existing customer by name/phone, pick one, clear back to walk-in, or
+// (when the quickAddCustomer setting is on) add a brand-new customer
+// without leaving the register. Selecting a row calls onSelect, which the
+// parent turns into a POST to /sales/sales/{id}/customer/.
+function CustomerPickerModal({ open, onClose, onSelect, allowQuickAdd, showPoints }) {
+  const { t } = useTranslation();
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddName, setQuickAddName] = useState("");
+  const [quickAddPhone, setQuickAddPhone] = useState("");
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
+  const [quickAddError, setQuickAddError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setSearchInput("");
+    setSearch("");
+    setQuickAddOpen(false);
+    setQuickAddName("");
+    setQuickAddPhone("");
+    setQuickAddError("");
+  }, [open]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    listCustomers({ search: search || undefined })
+      .then((data) => { if (!cancelled) setCustomers(data); })
+      .catch(() => { if (!cancelled) setError(t("pos.couldntLoadCustomers")); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, search, t]);
+
+  async function handleQuickAddSubmit(e) {
+    e.preventDefault();
+    if (!quickAddName.trim() && !quickAddPhone.trim()) return;
+    setQuickAddSaving(true);
+    setQuickAddError("");
+    try {
+      const customer = await createCustomer({ name: quickAddName.trim(), phone: quickAddPhone.trim() });
+      onSelect(customer);
+    } catch {
+      setQuickAddError(t("customers.couldntSave"));
+    } finally {
+      setQuickAddSaving(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={t("pos.customerPickerTitle")} size="md">
+      <div className="space-y-3">
+        <div className="relative">
+          <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+          <input
+            autoFocus
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("pos.customerSearchPlaceholder")}
+            className="input !pl-8"
+          />
+        </div>
+
+        <Button variant="outline" className="w-full justify-center" onClick={() => onSelect(null)}>
+          {t("pos.continueAsWalkIn")}
+        </Button>
+
+        <div className="max-h-64 overflow-y-auto -mx-1 px-1 space-y-1">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 text-ink-400 text-sm py-6">
+              <Loader2 size={16} className="animate-spin" /> {t("common.loading")}
+            </div>
+          ) : error ? (
+            <p className="text-danger-600 text-sm py-2">{error}</p>
+          ) : customers.length === 0 ? (
+            <p className="text-ink-400 text-sm text-center py-6">{t("pos.noCustomersFound")}</p>
+          ) : (
+            customers.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onSelect(c)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-surface-200 hover:border-brand-500 hover:bg-surface-50 text-left"
+              >
+                <div>
+                  <p className="text-sm font-medium text-ink-900">{c.name || t("pos.walkIn")}</p>
+                  {c.phone && <p className="text-xs text-ink-400 font-figures">{c.phone}</p>}
+                </div>
+                {showPoints && (
+                  <span className="text-xs font-figures text-ink-400">
+                    {c.loyalty_points} {t("pos.loyaltyPointsShort")}
+                  </span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+
+        {allowQuickAdd && (
+          <div className="border-t border-surface-200 pt-3">
+            {quickAddOpen ? (
+              <form className="space-y-2" onSubmit={handleQuickAddSubmit}>
+                <input
+                  value={quickAddName}
+                  onChange={(e) => setQuickAddName(e.target.value)}
+                  placeholder={t("customers.name")}
+                  className="input"
+                />
+                <input
+                  value={quickAddPhone}
+                  onChange={(e) => setQuickAddPhone(e.target.value)}
+                  placeholder={t("customers.phone")}
+                  className="input"
+                />
+                {quickAddError && <p className="text-danger-600 text-sm">{quickAddError}</p>}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1 justify-center" onClick={() => setQuickAddOpen(false)} disabled={quickAddSaving}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1 justify-center" disabled={quickAddSaving}>
+                    {quickAddSaving ? t("common.saving") : t("common.save")}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button variant="ghost" className="w-full justify-center" onClick={() => setQuickAddOpen(true)}>
+                <UserPlus size={16} /> {t("pos.newCustomer")}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+// History panel for whoever is currently attached to the sale — only
+// rendered from the header when customerPurchaseHistory is enabled (see
+// DEFAULT_POS_SETTINGS). Read-only: this is a quick lookup for the
+// cashier, not the full sales report (that's /sales in the admin app).
+function CustomerHistoryModal({ open, onClose, customer }) {
+  const { t } = useTranslation();
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open || !customer) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    getCustomerSales(customer.id)
+      .then((data) => { if (!cancelled) setSales(data); })
+      .catch(() => { if (!cancelled) setError(t("pos.couldntLoadCustomers")); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, customer, t]);
+
+  return (
+    <Modal open={open} onClose={onClose} title={`${t("pos.customerHistoryTitle")} — ${customer?.name || t("pos.walkIn")}`} size="md">
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 text-ink-400 text-sm py-6">
+          <Loader2 size={16} className="animate-spin" /> {t("common.loading")}
+        </div>
+      ) : error ? (
+        <p className="text-danger-600 text-sm">{error}</p>
+      ) : sales.length === 0 ? (
+        <p className="text-ink-400 text-sm text-center py-6">{t("pos.customerHistoryEmpty")}</p>
+      ) : (
+        <div className="max-h-80 overflow-y-auto space-y-1">
+          {sales.map((s) => (
+            <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-surface-200">
+              <div>
+                <p className="text-sm font-medium text-ink-900 font-figures">{s.sale_number || "—"}</p>
+                <p className="text-xs text-ink-400">
+                  {new Date(s.sold_at || s.created_at).toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium font-figures text-ink-900">৳{Number(s.total_amount).toFixed(2)}</p>
+                <Badge tone={s.status === "completed" ? "success" : s.status === "void" ? "danger" : "neutral"}>
+                  {s.status.replace("_", " ")}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // The full POS Settings panel opened from the gear icon in the header.
-// Everything except the invoice-format/paper-width fields is cosmetic for
-// now — see DEFAULT_POS_SETTINGS above — but is still persisted so it
-// doesn't reset every time the modal is reopened. Hand-rolled rather than
-// built on the shared Modal component because the gradient hero header and
-// scrolling body + sticky footer don't fit Modal's simpler title-bar shape.
+// The invoice-format/paper-width fields, and the customer-related toggles
+// (quickAddCustomer, customerPurchaseHistory, enableCustomerPoints — see
+// CustomerPickerModal/CustomerHistoryModal above) have a real effect.
+// Everything else is still cosmetic for now — see DEFAULT_POS_SETTINGS
+// above — but is still persisted so it doesn't reset every time the modal
+// is reopened. Hand-rolled rather than built on the shared Modal component
+// because the gradient hero header and scrolling body + sticky footer
+// don't fit Modal's simpler title-bar shape.
 function POSSettingsModal({ open, onClose, receiptWidthMm, onReceiptWidthChange }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(getStoredPOSSettings);
